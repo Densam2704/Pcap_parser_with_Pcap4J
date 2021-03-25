@@ -8,39 +8,51 @@ public class Main {
 
     public static void main(String[] args) throws PcapNativeException, NotOpenException {
 
-        String sta_filename = "sta.pcap";
-        String sta_filepath = "C:\\Study\\Magister\\Diploma\\Data";
-        String sta_pcapFile =
+        String staFilename = "sta.pcap";
+        String staFilepath = "C:\\Study\\Magister\\Diploma\\Data";
+        String staPcapFile =
                 new StringBuilder()
-                        .append(sta_filepath)
+                        .append(staFilepath)
                         .append("\\")
-                        .append(sta_filename)
+                        .append(staFilename)
                         .toString();
-        PcapHandle sta_ph = Pcaps.openOffline(sta_pcapFile, PcapHandle.TimestampPrecision.NANO);
-        PcapManager staPcapManager = new PcapManager(sta_pcapFile,sta_ph,ConstantsIface.STATION);
-        ArrayList<Packet>packets=staPcapManager.getPacketArrayList(true);
 
 
+        //String apFileName = "sta.pcap";
+        //String apFileName = "packet6754.pcap";
+        //String apFileName = "decrypted2.pcap" ;
+        //String apFileName = "tcp_only.pcap";
+        //String apFileName = "notDecrypted.pcap" ;
+        String apFileName = "exported2.pcap" ;
+        String apFilePath = "C:\\Study\\Magister\\Diploma\\Data";
+        String apPcapFile =
+                new StringBuilder()
+                .append(apFilePath)
+                .append("\\")
+                .append(apFileName)
+                .toString();
 
+        //readStaPcap(staPcapFile);
+        readApPcap(apPcapFile);
 
 
 // This part is to be rewritten or replaced with PcapManager class.
 //        if(true)return;
 //
-//        //String filename = "sta.pcap";
-//        //String filename = "packet6754.pcap";
-//        //String filename = "decrypted2.pcap" ;
-//        String filename = "tcp_only.pcap";
-//        //String filename = "notDecrypted.pcap" ;
-//        String filepath = "C:\\Study\\Magister\\Diploma\\Data";
-//        String pcapFile =
+//        //String apFileName = "sta.pcap";
+//        //String apFileName = "packet6754.pcap";
+//        //String apFileName = "decrypted2.pcap" ;
+//        String apFileName = "tcp_only.pcap";
+//        //String apFileName = "notDecrypted.pcap" ;
+//        String apFilePath = "C:\\Study\\Magister\\Diploma\\Data";
+//        String apPcapFile =
 //                new StringBuilder()
-//                .append(filepath)
+//                .append(apFilePath)
 //                .append("\\")
-//                .append(filename)
+//                .append(apFileName)
 //                .toString();
 //
-//        PcapHandle ap_ph = Pcaps.openOffline(pcapFile);
+//        PcapHandle ap_ph = Pcaps.openOffline(apPcapFile);
 //
 //        ArrayList<Packet> packetList = new ArrayList<>();
 //        int packetNumber = 0;
@@ -50,9 +62,7 @@ public class Main {
 //            packetNumber++;
 //            System.out.println("Packet "+packetNumber);
 //
-//            //Попытка удалить ненужную последовательность байт
-//            //Скорее всего лажа, потому что не будет части байтов. И в конце нарушится контрольная сумма кадров.
-//            //Плюс еще и недописано.
+//
 //            byte[] rawData = packet.getRawData();
 //
 ////            int lengthRawData = rawData.length;
@@ -109,7 +119,7 @@ public class Main {
 ////            }
 //
 //        }
-//        System.out.println(packetNumber + " packets have been read from " + pcapFile);
+//        System.out.println(packetNumber + " packets have been read from " + apPcapFile);
 //        //String builder from example
 ////        StringBuilder stringBuilder = new StringBuilder(1000);
 ////        stringBuilder.append(ap_ph.getNextPacket().toString())
@@ -119,6 +129,47 @@ public class Main {
 ////        ap_ph.close();
 //
 //        //System.out.println(stringBuilder.toString());
+
+    }
+
+    private static void readStaPcap(String staPcapFile) throws PcapNativeException, NotOpenException {
+        PcapHandle staPh = Pcaps.openOffline(staPcapFile, PcapHandle.TimestampPrecision.NANO);
+        PcapManager staPcapManager = new PcapManager(staPcapFile,ConstantsIface.STATION);
+
+        //ArrayList<Packet> packets = new ArrayList<>();
+
+        int packetNumber = 0;
+        Packet packet = null;
+        while ((packet = staPh.getNextPacket()) != null) {
+            //packets.add(packet);
+            packetNumber++;
+            System.out.println("Packet "+packetNumber);
+            System.out.println("Time:\n"+staPcapManager.getArrivalTime(staPh));
+            //System.out.println(packet.toString());
+
+        }
+        System.out.println(packetNumber + " packets have been read from " + staPcapFile);
+        staPh.close();
+    }
+
+    private static void readApPcap (String apPcapFile) throws NotOpenException, PcapNativeException {
+        PcapHandle apPh = Pcaps.openOffline(apPcapFile, PcapHandle.TimestampPrecision.NANO);
+        PcapManager apPcapManager = new PcapManager(apPcapFile,ConstantsIface.ACCESS_POINT);
+
+        //ArrayList<Packet> packets = new ArrayList<>();
+
+        int packetNumber = 0;
+        Packet packet = null;
+        while ((packet = apPh.getNextPacket()) != null) {
+            //packets.add(packet);
+            packetNumber++;
+            System.out.println("Packet "+packetNumber);
+            System.out.println("TSFT:\n"+apPcapManager.getTSFT(packet));
+            System.out.println(packet.toString());
+
+        }
+        System.out.println(packetNumber + " packets have been read from " + apPcapFile);
+        apPh.close();
 
     }
 
