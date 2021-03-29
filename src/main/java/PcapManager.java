@@ -49,7 +49,7 @@ public class PcapManager {
 
             BigInteger arrivalTime= new BigInteger("0");
             //We have to check that traffic is collected in Monitor mode, which was used only in AP traffic
-        if (trafficSource.equals(ConstantsIface.ACCESS_POINT)){
+        if (trafficSource.equals(ConstantsIface.ACCESS_POINT)&&packet!=null){
             RadiotapPacket rtPacket = packet.get(RadiotapPacket.class);
             if(rtPacket != null){
                 RadiotapPacket.RadiotapHeader rtHeader = rtPacket.getHeader();
