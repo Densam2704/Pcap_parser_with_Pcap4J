@@ -1,6 +1,4 @@
 
-import com.sun.corba.se.impl.orbutil.HexOutputStream;
-import org.omg.CORBA.portable.UnknownException;
 import org.pcap4j.core.*;
 import org.pcap4j.packet.*;
 import org.pcap4j.packet.namednumber.Dot11FrameType;
@@ -201,18 +199,20 @@ public class Main {
 //                    System.out.println("Получен radiotap");
 //                    System.out.println(radiotapPacket.toString());
                     byte[] payload = radiotapPacket.getPayload().getRawData();
-                    short wlanAddrLen=6;
 
-//
-//                    //Смотрим IEEE802.11 Type/Subtipe
-//                    switch (type.value()) {
-//                        case 0: // assoc-req
-//                            System.out.println("assoc-req");
-//                            break;
-//                        case 0x0020:
+                    //This gives a little bit more packets than wireshark (for ap.pcap 6308 instead of 6295)
+                    //Don't know why this happens
+                    short wlanAddrLen=6;
+                    //Source address position in payload
+                    short wlanSaPos=10;
+
+                    //There is a case when source address is a 4th address in a WLAN frame
+                    if (payload[0]==0x08 && payload[1]==0x42){
+                        wlanSaPos=16;
+                    }
 
                     byte[]byteWlanSa = new byte [wlanAddrLen];
-                    System.arraycopy(payload,10,byteWlanSa,0,wlanAddrLen);
+                    System.arraycopy(payload,wlanSaPos,byteWlanSa,0,wlanAddrLen);
                     String wlanSa = byteArrayToHex(byteWlanSa);
 //
                     if (wlanSa.equals(MAC1)||wlanSa.equals(MAC2)){
@@ -221,13 +221,15 @@ public class Main {
                         double time_delta=getTimeDelta(apPh,previousCapturedFrameTime);
                         System.out.println(String.format(packetNumber+ " \nTime from previous captured frame = %.9f",time_delta));
 
+                        System.out.println("wlan source address: " + wlanSa);
+                        System.out.println("payload: "+ byteArrayToHex(payload));
                         //TODO export time_delta to somewhere
                     }
                     else
                     {
-                        System.out.println(packetNumber);
-                        System.out.println("wlan source address: " + wlanSa);
-                        System.out.println("payload: "+ byteArrayToHex(payload));
+//                        System.out.println(packetNumber);
+//                        System.out.println("wlan source address: " + wlanSa);
+//                        System.out.println("payload: "+ byteArrayToHex(payload));
                     }
 
                 }
@@ -355,7 +357,7 @@ public class Main {
         return sb.toString();
     }
 
-    //Get Time delta from previous captured frame
+    //Get Time delta from previous frame
     public static Double getTimeDelta(PcapHandle ph, Timestamp previousFrameTime) {
         double time_delta = 0;
 
