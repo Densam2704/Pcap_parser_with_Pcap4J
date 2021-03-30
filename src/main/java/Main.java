@@ -42,7 +42,8 @@ public class Main {
         //readStaPcap(staPcapFile);
         //readApPcap(apPcapFile);
         //find_1(staPcapFile);
-        find_2(apPcapFile);
+        //find_2(apPcapFile);
+        find_3(staPcapFile,apPcapFile);
 
 
 // This part is to be rewritten or replaced with PcapManager class.
@@ -200,7 +201,10 @@ public class Main {
 //                    System.out.println(radiotapPacket.toString());
                     byte[] payload = radiotapPacket.getPayload().getRawData();
 
-                    //This gives a little bit more packets than wireshark (for ap.pcap 6308 instead of 6295)
+                    //When using following algorithm of parsing wlan frames in search of SA,
+                    //It gives a little bit more packets than the Wireshark
+                    //For instance, for ap.pcap it gathered 6308 packets instead of 6295,
+                    //i.e. 9 extra packets.
                     //Don't know why this happens
                     short wlanAddrLen=6;
                     //Source address position in payload
@@ -235,9 +239,8 @@ public class Main {
                 }
 
             }
-            catch (Exception e){
+            catch (Exception e){}
 
-            }
             previousCapturedFrameTime=apPh.getTimestamp();
 
         }
@@ -245,7 +248,165 @@ public class Main {
         System.out.println(packetNumber + " packets have been read from " + apPcapFile);
         apPh.close();
     }
-    //find_3_1
+    //Time of processing WLAN traffic
+    private static boolean find_3 (String staPcapFile, String apPcapFile) throws PcapNativeException, NotOpenException {
+
+        PcapHandle staPh = Pcaps.openOffline(staPcapFile, PcapHandle.TimestampPrecision.NANO);
+
+        //MACs for searching
+        String saMac ="803049236661";//80:30:49:23:66:61
+        String daMac ="00c0ca98dfdf";//00:c0:ca:98:df:df
+        int staPacketNum = 0;
+        Packet staPacket = null;
+        Timestamp previousCapturedFrameTime=null;
+        //Timestamp previousDisplayedFrameTime=null;
+        while ((staPacket = staPh.getNextPacket()) != null) {
+            staPacketNum++;
+
+            boolean isFromStation=false;
+            boolean isTCP=false;
+            short checksumTCP=0;
+
+            try {
+                IpV4Packet ipV4Packet = staPacket.get(IpV4Packet.class);
+                if(ipV4Packet.getHeader().getSrcAddr().equals(InetAddress.getByName("192.0.2.12")))
+                    isFromStation=true;
+                if(ipV4Packet.getHeader().getProtocol().toString().equals("6 (TCP)")){
+                    isTCP=true;
+                }
+//                System.out.println(ipV4Packet.getHeader().getProtocol().toString());
+            }
+            catch (Exception e){}
+
+            //If staPacket is from STA with IP 192.0.2.12 and staPacket has TCP header
+            if (isFromStation && isTCP){
+                try {
+                    TcpPacket tcpPacket = staPacket.get(TcpPacket.class);
+                    if(tcpPacket!=null)
+                    {
+                        checksumTCP=tcpPacket.getHeader().getChecksum();
+                        byte checksumTCPBytes[] = new byte[2];
+                        // Big Endian
+                        //https://stackoverflow.com/questions/2188660/convert-short-to-byte-in-java
+                        checksumTCPBytes[0] = (byte) (checksumTCP >> 8);
+                        checksumTCPBytes[1] = (byte) checksumTCP;
+
+                        System.out.println("Found TCP packet from STA file " + staPcapFile+
+                                "\nPacket number "+staPacketNum);
+                        System.out.println("TCP checksum for verifying "+byteArrayToHex(checksumTCPBytes));
+                        System.out.println("Now checking this TCP paket in "+apPcapFile);
+                        if (find_3_2(apPcapFile,checksumTCPBytes,saMac,daMac)){
+//                            System.out.println("Packet was found in "+apPcapFile);
+                            System.out.println("t2  = " + staPh.getTimestamp().getTime());
+                            System.out.println("t2 nanos = " + staPh.getTimestamp().getNanos());
+                            //TODO export these values somewhere
+                            System.out.println(staPacketNum + " packets have been read from " + staPcapFile);
+                            staPh.close();
+                            return true;
+                        }
+                        else {
+                            System.out.println("There was no such TCP packet in "+apPcapFile);
+                        }
+
+                    }
+                }
+                catch (Exception e){}
+            }
+        }
+        staPh.close();
+        System.out.println(staPacketNum + " packets have been read from " + staPcapFile);
+        return false;
+    }
+
+    private static boolean find_3_2(String apPcapFile, byte checksumTCPBytes[],
+                                    String saMac, String daMac) throws PcapNativeException, NotOpenException {
+
+        PcapHandle apPh = Pcaps.openOffline(apPcapFile);
+
+        int apPacketNum = 0;
+        Packet packet = null;
+
+        while ((packet= apPh.getNextPacket())!=null) {
+            apPacketNum++;
+            RadiotapPacket radiotapPacket = packet.get(RadiotapPacket.class);
+            try {
+                if (radiotapPacket != null) {
+                    byte[] payload = radiotapPacket.getPayload().getRawData();
+
+                    Dot11FrameType type = Dot11FrameType.getInstance(
+                            (byte) (((payload[0] << 2) & 0x30) | ((payload[0] >> 4) & 0x0F))
+                    );
+                    //Looking only for  IEEE802.11 data frames in a Type/Subtype field
+                    switch (type.value()) {
+                        case 0x0020:
+                            //IEEE802.11 data frames
+//                            System.out.println("Wlan data frame");
+
+                            //When using following algorithm of parsing wlan frames in search of SA,
+                            //It gives a little bit more packets than the Wireshark
+                            //For instance, for ap.pcap it gathered 6308 packets instead of 6295,
+                            //i.e. 9 extra packets.
+                            //Don't know why this happens
+
+                            short wlanAddrLen=6;
+                            //Destination address position in payload
+                            short wlanDaPos=4;
+                            //Source address position in payload in case of 3 addresses used in WLAN frame
+                            short wlanSaPos=10;
+
+                            //There is a case when source address is a 4th address in a WLAN frame
+                            if (payload[0]==0x08 && payload[1]==0x42){
+                                wlanSaPos=16;
+                            }
+
+                            byte[]byteWlanSa = new byte [wlanAddrLen];
+                            System.arraycopy(payload,wlanSaPos,byteWlanSa,0,wlanAddrLen);
+                            String wlanSa = byteArrayToHex(byteWlanSa);
+
+                            byte[]byteWlanDa = new byte [wlanAddrLen];
+                            System.arraycopy(payload,wlanDaPos,byteWlanDa,0,wlanAddrLen);
+                            String wlanDa = byteArrayToHex(byteWlanDa);
+
+                            //If SA and DA in both AP and STA are equal and
+                            //If checksums in both AP and STA packets are equal
+                            //then we have found exactly the same packet
+                            //in AP file. And we can take timestamp from this packet
+                            if (wlanSa.equals(saMac) && wlanDa.equals(daMac) &&
+                                    payload[76]==checksumTCPBytes[0] && payload[77]==checksumTCPBytes[1]){
+                                System.out.println("t1 = "+ apPh.getTimestamp().getTime());
+                                System.out.println("t1 nanos = " + apPh.getTimestamp().getNanos());
+                                //TODO export these values to somewhere
+
+                                //TSFT. Not sure that we need this timestamp
+//                                System.out.println("Packet  was found in "+apPcapFile);
+//                                System.out.println("Packet number in the file is " + apPacketNum);
+//                                //Now we are looking for TSFT
+//                                ArrayList<RadiotapPacket.RadiotapData> rtDataFields = radiotapPacket.getHeader().getDataFields();
+//                                for (RadiotapPacket.RadiotapData field: rtDataFields){
+//                                    if (!field.toString().equals(null) &&  field.getClass().equals(RadiotapDataTsft.class)){
+//                                        System.out.println("t1 = " + ((RadiotapDataTsft) field).getMacTimestamp());
+////                                System.out.println(" Field " +field.toString());
+//                                    }
+//                                }
+                                apPh.close();
+                                return true;
+                            }
+                            break;
+                    }
+//
+
+
+
+                }
+            }
+            catch (Exception e) {}
+
+        }
+        System.out.println("All" + apPacketNum + " packets have been read from AP file" );
+        apPh.close();
+        return false;
+    }
+    //sample
     private static void readStaPcap(String staPcapFile) throws PcapNativeException, NotOpenException {
         PcapHandle staPh = Pcaps.openOffline(staPcapFile, PcapHandle.TimestampPrecision.NANO);
        // PcapManager staPcapManager = new PcapManager(staPcapFile,ConstantsIface.STATION);
@@ -266,7 +427,7 @@ public class Main {
         staPh.close();
     }
 
-    //3.2
+    //sample
     private static void readApPcap (String apPcapFile) throws NotOpenException, PcapNativeException, EOFException, TimeoutException {
         PcapHandle apPh = Pcaps.openOffline(apPcapFile, PcapHandle.TimestampPrecision.NANO);
 
