@@ -6,14 +6,11 @@ import org.pcap4j.packet.namednumber.Dot11FrameType;
 import java.io.EOFException;
 import java.net.InetAddress;
 import java.sql.Timestamp;
-import java.text.Format;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.concurrent.TimeoutException;
 
 public class Main {
 
-    public static void main(String[] args) throws PcapNativeException, NotOpenException, EOFException, TimeoutException {
+    public static void main(String[] args) throws PcapNativeException, NotOpenException {
 
         String staFilename = "sta.pcap";
         String staFilepath = "C:\\Study\\Magister\\Diploma\\Data";
@@ -43,7 +40,7 @@ public class Main {
         //readApPcap(apPcapFile);
         //find_1(staPcapFile);
         //find_2(apPcapFile);
-        find_3(staPcapFile,apPcapFile);
+        find_3_1(staPcapFile,apPcapFile);
 
 
 // This part is to be rewritten or replaced with PcapManager class.
@@ -163,8 +160,9 @@ public class Main {
             }
             //If packet is from STA with IP 192.0.2.12
             if (isFromStation){
-                double time_delta=getTimeDelta(staPh,previousCapturedFrameTime);
-                System.out.println(String.format(packetNumber+ " \nTime from previous captured frame = %.9f",time_delta));
+                double time_delta=getTimeDelta(staPh.getTimestamp(),previousCapturedFrameTime);
+                System.out.println(String.format(packetNumber
+                        + " \nTime from previous captured frame = %.9f",time_delta));
                 //TODO export time_delta to somewhere
             }
             previousCapturedFrameTime=staPh.getTimestamp();
@@ -222,8 +220,9 @@ public class Main {
                     if (wlanSa.equals(MAC1)||wlanSa.equals(MAC2)){
                         System.out.println("THIS IS OUR FRAME");
                         filteredPackets++;
-                        double time_delta=getTimeDelta(apPh,previousCapturedFrameTime);
-                        System.out.println(String.format(packetNumber+ " \nTime from previous captured frame = %.9f",time_delta));
+                        double time_delta=getTimeDelta(apPh.getTimestamp(),previousCapturedFrameTime);
+                        System.out.println(String.format(packetNumber
+                                + " \nTime from previous captured frame = %.9f",time_delta));
 
                         System.out.println("wlan source address: " + wlanSa);
                         System.out.println("payload: "+ byteArrayToHex(payload));
@@ -249,7 +248,8 @@ public class Main {
         apPh.close();
     }
     //Time of processing WLAN traffic
-    private static boolean find_3 (String staPcapFile, String apPcapFile) throws PcapNativeException, NotOpenException {
+    //Find delta 1. From STA to AP
+    private static boolean find_3_1(String staPcapFile, String apPcapFile) throws PcapNativeException, NotOpenException {
 
         PcapHandle staPh = Pcaps.openOffline(staPcapFile, PcapHandle.TimestampPrecision.NANO);
 
@@ -295,10 +295,17 @@ public class Main {
                                 "\nPacket number "+staPacketNum);
                         System.out.println("TCP checksum for verifying "+byteArrayToHex(checksumTCPBytes));
                         System.out.println("Now checking this TCP paket in "+apPcapFile);
-                        if (find_3_2(apPcapFile,checksumTCPBytes,saMac,daMac)){
+
+                        PcapHandle apPh= find_3_TCP_in_AP(apPcapFile,checksumTCPBytes,saMac,daMac);
+                        //If we found the same packet on AP side
+                        if (apPh!=null){
 //                            System.out.println("Packet was found in "+apPcapFile);
+
+                            System.out.println("t1 = "+ apPh.getTimestamp().getTime());
+                            System.out.println("t1 nanos = " + apPh.getTimestamp().getNanos());
                             System.out.println("t2  = " + staPh.getTimestamp().getTime());
                             System.out.println("t2 nanos = " + staPh.getTimestamp().getNanos());
+                            System.out.println("delta = "+getTimeDelta(staPh.getTimestamp(),apPh.getTimestamp()));
                             //TODO export these values somewhere
                             System.out.println(staPacketNum + " packets have been read from " + staPcapFile);
                             staPh.close();
@@ -318,8 +325,15 @@ public class Main {
         return false;
     }
 
-    private static boolean find_3_2(String apPcapFile, byte checksumTCPBytes[],
-                                    String saMac, String daMac) throws PcapNativeException, NotOpenException {
+    //find delta 2 ( FROM AP TO STA
+    private static boolean find_3_2(String staPcapFile, String apPcapFile) throws PcapNativeException, NotOpenException {
+
+        return false;
+    }
+// find TCP packet in AP side
+    //returns PcapHandle so we could find time
+    private static PcapHandle find_3_TCP_in_AP(String apPcapFile, byte checksumTCPBytes[],String saMac,
+                                               String daMac) throws PcapNativeException, NotOpenException {
 
         PcapHandle apPh = Pcaps.openOffline(apPcapFile);
 
@@ -373,9 +387,6 @@ public class Main {
                             //in AP file. And we can take timestamp from this packet
                             if (wlanSa.equals(saMac) && wlanDa.equals(daMac) &&
                                     payload[76]==checksumTCPBytes[0] && payload[77]==checksumTCPBytes[1]){
-                                System.out.println("t1 = "+ apPh.getTimestamp().getTime());
-                                System.out.println("t1 nanos = " + apPh.getTimestamp().getNanos());
-                                //TODO export these values to somewhere
 
                                 //TSFT. Not sure that we need this timestamp
 //                                System.out.println("Packet  was found in "+apPcapFile);
@@ -389,7 +400,7 @@ public class Main {
 //                                    }
 //                                }
                                 apPh.close();
-                                return true;
+                                return apPh;
                             }
                             break;
                     }
@@ -404,7 +415,7 @@ public class Main {
         }
         System.out.println("All" + apPacketNum + " packets have been read from AP file" );
         apPh.close();
-        return false;
+        return null;
     }
     //sample
     private static void readStaPcap(String staPcapFile) throws PcapNativeException, NotOpenException {
@@ -427,7 +438,7 @@ public class Main {
         staPh.close();
     }
 
-    //sample
+    //sample. TODO Delete it. When I finish the program
     private static void readApPcap (String apPcapFile) throws NotOpenException, PcapNativeException, EOFException, TimeoutException {
         PcapHandle apPh = Pcaps.openOffline(apPcapFile, PcapHandle.TimestampPrecision.NANO);
 
@@ -518,21 +529,21 @@ public class Main {
         return sb.toString();
     }
 
-    //Get Time delta from previous frame
-    public static Double getTimeDelta(PcapHandle ph, Timestamp previousFrameTime) {
+    //Get Time delta between 2 frames
+    public static Double getTimeDelta(Timestamp currFrameTime, Timestamp previousFrameTime) {
         double time_delta = 0;
 
         //If previous frame didn't have time delta
         if (previousFrameTime != null) {
 
-            int deltaInMs = (int) Math.abs(previousFrameTime.getTime() - ph.getTimestamp().getTime());
+            int deltaInMs = (int) Math.abs(previousFrameTime.getTime() - currFrameTime.getTime());
             //If delta in seconds is > 0 then we should count seconds together with nano seconds
             if (deltaInMs / 1000 != 0) {
                 time_delta = deltaInMs / 1000;
             }
             //If not, then we can simply count delta in nano seconds
             int prevNanos = previousFrameTime.getNanos();
-            time_delta += (double) Math.abs(ph.getTimestamp().getNanos() - prevNanos) / 1000000000;
+            time_delta += (double) Math.abs(currFrameTime.getNanos() - prevNanos) / 1000000000;
 
 
         }
