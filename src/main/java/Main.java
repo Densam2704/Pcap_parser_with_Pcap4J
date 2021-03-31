@@ -41,6 +41,7 @@ public class Main {
         //find_1(staPcapFile);
         //find_2(apPcapFile);
         find_3_1(staPcapFile,apPcapFile);
+        find_3_2(staPcapFile,apPcapFile);
 
 
 // This part is to be rewritten or replaced with PcapManager class.
@@ -291,7 +292,7 @@ public class Main {
                         checksumTCPBytes[0] = (byte) (checksumTCP >> 8);
                         checksumTCPBytes[1] = (byte) checksumTCP;
 
-                        System.out.println("Found TCP packet from STA file " + staPcapFile+
+                        System.out.println("Found TCP packet from STA to AP in file " + staPcapFile+
                                 "\nPacket number "+staPacketNum);
                         System.out.println("TCP checksum for verifying "+byteArrayToHex(checksumTCPBytes));
                         System.out.println("Now checking this TCP paket in "+apPcapFile);
@@ -305,7 +306,7 @@ public class Main {
                             System.out.println("t1 nanos = " + apPh.getTimestamp().getNanos());
                             System.out.println("t2  = " + staPh.getTimestamp().getTime());
                             System.out.println("t2 nanos = " + staPh.getTimestamp().getNanos());
-                            System.out.println("delta = "+getTimeDelta(staPh.getTimestamp(),apPh.getTimestamp()));
+                            System.out.println("delta1 = "+getTimeDelta(staPh.getTimestamp(),apPh.getTimestamp()));
                             //TODO export these values somewhere
                             System.out.println(staPacketNum + " packets have been read from " + staPcapFile);
                             staPh.close();
@@ -325,9 +326,80 @@ public class Main {
         return false;
     }
 
-    //find delta 2 ( FROM AP TO STA
+    //find delta 2 ( FROM AP TO STA )
     private static boolean find_3_2(String staPcapFile, String apPcapFile) throws PcapNativeException, NotOpenException {
 
+        PcapHandle staPh = Pcaps.openOffline(staPcapFile, PcapHandle.TimestampPrecision.NANO);
+
+        //MACs for searching
+        String staMac ="803049236661";//80:30:49:23:66:61
+        String apMac ="00c0ca98dfdf";//00:c0:ca:98:df:df
+        int staPacketNum = 0;
+        Packet staPacket = null;
+        Timestamp previousCapturedFrameTime=null;
+        //Timestamp previousDisplayedFrameTime=null;
+        while ((staPacket = staPh.getNextPacket()) != null) {
+            staPacketNum++;
+
+            boolean isFromStation=false;
+            boolean isTCP=false;
+            short checksumTCP=0;
+
+            try {
+                IpV4Packet ipV4Packet = staPacket.get(IpV4Packet.class);
+                if(ipV4Packet.getHeader().getDstAddr().equals(InetAddress.getByName("192.0.2.12")))
+                    isFromStation=true;
+                if(ipV4Packet.getHeader().getProtocol().toString().equals("6 (TCP)")){
+                    isTCP=true;
+                }
+//                System.out.println(ipV4Packet.getHeader().getProtocol().toString());
+            }
+            catch (Exception e){}
+
+            //If staPacket is to STA with IP 192.0.2.12 and staPacket has TCP header
+            if (isFromStation && isTCP){
+                try {
+                    TcpPacket tcpPacket = staPacket.get(TcpPacket.class);
+                    if(tcpPacket!=null)
+                    {
+                        checksumTCP=tcpPacket.getHeader().getChecksum();
+                        byte checksumTCPBytes[] = new byte[2];
+                        // Big Endian
+                        //https://stackoverflow.com/questions/2188660/convert-short-to-byte-in-java
+                        checksumTCPBytes[0] = (byte) (checksumTCP >> 8);
+                        checksumTCPBytes[1] = (byte) checksumTCP;
+
+                        System.out.println("Found TCP packet from AP to STA in file " + staPcapFile+
+                                "\nPacket number "+staPacketNum);
+                        System.out.println("TCP checksum for verifying "+byteArrayToHex(checksumTCPBytes));
+                        System.out.println("Now checking this TCP paket in "+apPcapFile);
+
+                        PcapHandle apPh= find_3_TCP_in_AP(apPcapFile,checksumTCPBytes,apMac,staMac);
+                        //If we found the same packet on AP side
+                        if (apPh!=null){
+//                            System.out.println("Packet was found in "+apPcapFile);
+
+                            System.out.println("t1 = "+ apPh.getTimestamp().getTime());
+                            System.out.println("t1 nanos = " + apPh.getTimestamp().getNanos());
+                            System.out.println("t2  = " + staPh.getTimestamp().getTime());
+                            System.out.println("t2 nanos = " + staPh.getTimestamp().getNanos());
+                            System.out.println("delta2 = "+getTimeDelta(staPh.getTimestamp(),apPh.getTimestamp()));
+                            //TODO export these values somewhere
+                            System.out.println(staPacketNum + " packets have been read from " + staPcapFile);
+                            staPh.close();
+                            return true;
+                        }
+                        else {
+                            System.out.println("There was no such TCP packet in "+apPcapFile);
+                        }
+
+                    }
+                }
+                catch (Exception e){}
+            }
+        }
+        staPh.close();
+        System.out.println(staPacketNum + " packets have been read from " + staPcapFile);
         return false;
     }
 // find TCP packet in AP side
@@ -404,10 +476,6 @@ public class Main {
                             }
                             break;
                     }
-//
-
-
-
                 }
             }
             catch (Exception e) {}
