@@ -22,12 +22,13 @@ public class Main {
                         .toString();
 
 
+        String apFileName = "ap.pcap" ;
         //String apFileName = "sta.pcap";
         //String apFileName = "packet6754.pcap";
         //String apFileName = "decrypted2.pcap" ;
         //String apFileName = "tcp_only.pcap";
-        String apFileName = "ap.pcap" ;
         //String apFileName = "exported2.pcap" ;
+
         String apFilePath = "C:\\Study\\Magister\\Diploma\\Data";
         String apPcapFile =
                 new StringBuilder()
@@ -36,15 +37,16 @@ public class Main {
                 .append(apFileName)
                 .toString();
 
-        //readStaPcap(staPcapFile);
-        //readApPcap(apPcapFile);
-        //find_1(staPcapFile);
-        //find_2(apPcapFile);
+        find_1(staPcapFile);
+        find_2(apPcapFile);
         find_3_1(staPcapFile,apPcapFile);
         find_3_2(staPcapFile,apPcapFile);
 
 
-// This part is to be rewritten or replaced with PcapManager class.
+// This part is to be deleted,rewritten or replaced with PcapManager class.
+
+        //readStaPcap(staPcapFile);
+        //readApPcap(apPcapFile);
 //        if(true)return;
 //
 //        //String apFileName = "sta.pcap";
@@ -170,6 +172,7 @@ public class Main {
         }
         staPh.close();
         System.out.println(packetNumber + " packets have been read from " + staPcapFile);
+        System.out.println();
 
     }
     //packet time delta from Station to Access Point (AP side)
@@ -209,7 +212,9 @@ public class Main {
                     //Source address position in payload
                     short wlanSaPos=10;
 
+                    //Usually only 3 addresses in WLAN frame used. BUT
                     //There is a case when source address is a 4th address in a WLAN frame
+                    //Frame Control field == 0x0842
                     if (payload[0]==0x08 && payload[1]==0x42){
                         wlanSaPos=16;
                     }
@@ -246,6 +251,7 @@ public class Main {
         }
         System.out.println(filteredPackets + " packets were captured from our stations " + apPcapFile);
         System.out.println(packetNumber + " packets have been read from " + apPcapFile);
+        System.out.println();
         apPh.close();
     }
     //Time of processing WLAN traffic
@@ -309,6 +315,7 @@ public class Main {
                             System.out.println("delta1 = "+getTimeDelta(staPh.getTimestamp(),apPh.getTimestamp()));
                             //TODO export these values somewhere
                             System.out.println(staPacketNum + " packets have been read from " + staPcapFile);
+                            System.out.println();
                             staPh.close();
                             return true;
                         }
@@ -323,6 +330,7 @@ public class Main {
         }
         staPh.close();
         System.out.println(staPacketNum + " packets have been read from " + staPcapFile);
+        System.out.println();
         return false;
     }
 
@@ -386,6 +394,7 @@ public class Main {
                             System.out.println("delta2 = "+getTimeDelta(staPh.getTimestamp(),apPh.getTimestamp()));
                             //TODO export these values somewhere
                             System.out.println(staPacketNum + " packets have been read from " + staPcapFile);
+                            System.out.println();
                             staPh.close();
                             return true;
                         }
@@ -400,6 +409,7 @@ public class Main {
         }
         staPh.close();
         System.out.println(staPacketNum + " packets have been read from " + staPcapFile);
+        System.out.println();
         return false;
     }
 // find TCP packet in AP side
@@ -460,9 +470,10 @@ public class Main {
                             if (wlanSa.equals(saMac) && wlanDa.equals(daMac) &&
                                     payload[76]==checksumTCPBytes[0] && payload[77]==checksumTCPBytes[1]){
 
+                                System.out.println("TCP packet  was found in "+apPcapFile);
+                                System.out.println("Packet number in the file is " + apPacketNum);
+
                                 //TSFT. Not sure that we need this timestamp
-//                                System.out.println("Packet  was found in "+apPcapFile);
-//                                System.out.println("Packet number in the file is " + apPacketNum);
 //                                //Now we are looking for TSFT
 //                                ArrayList<RadiotapPacket.RadiotapData> rtDataFields = radiotapPacket.getHeader().getDataFields();
 //                                for (RadiotapPacket.RadiotapData field: rtDataFields){
