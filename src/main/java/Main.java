@@ -39,9 +39,9 @@ public class Main {
                 .toString();
 
         find_1(staPcapFile);
-        find_2(apPcapFile);
-        find_3_1(staPcapFile,apPcapFile);
-        find_3_2(staPcapFile,apPcapFile);
+        //find_2(apPcapFile);
+       // find_3_1(staPcapFile,apPcapFile);
+       // find_3_2(staPcapFile,apPcapFile);
 
 
 // This part will be deleted,rewritten or replaced with PcapManager class.
@@ -142,7 +142,7 @@ public class Main {
 //        //System.out.println(stringBuilder.toString());
 
     }
-    //1 time delta from previous captured frame. (packets from Station) (Station side)
+    //1 time delta from previous captured frame. (packets from Station to AP) (Station side)
     private static void  find_1 (String staPcapFile) throws PcapNativeException, NotOpenException {
 
         PcapHandle staPh = Pcaps.openOffline(staPcapFile, PcapHandle.TimestampPrecision.NANO);
@@ -177,7 +177,7 @@ public class Main {
         System.out.println();
 
     }
-    //packet time delta from Station to Access Point (AP side)
+    //packet time delta from previous captured frame (Station to Access Point) (AP side)
     private static void find_2 (String apPcapFile)throws PcapNativeException, NotOpenException {
         PcapHandle apPh = Pcaps.openOffline(apPcapFile, PcapHandle.TimestampPrecision.NANO);
 
