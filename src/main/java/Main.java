@@ -5,24 +5,28 @@ import org.pcap4j.packet.*;
 import org.pcap4j.packet.namednumber.Dot11FrameType;
 
 import java.io.EOFException;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.net.InetAddress;
 import java.sql.Timestamp;
 import java.util.concurrent.TimeoutException;
 
 public class Main {
 
-    public static void main(String[] args) throws PcapNativeException, NotOpenException {
+    public static String resultFile1;
+    public static String resultFile2;
+    public static String staPcapFile;
+    public static String apPcapFile;
 
-        String staFilename = "sta.pcap";
+    public static void main(String[] args) throws PcapNativeException, NotOpenException, IOException {
+
+
         String staFilepath = "C:\\Study\\Magister\\Diploma\\Data";
-        String staPcapFile =
-                new StringBuilder()
-                        .append(staFilepath)
-                        .append("\\")
-                        .append(staFilename)
-                        .toString();
+        String staFilename = "sta.pcap";
+         staPcapFile = staFilepath + "\\" + staFilename;
 
 
+        String apFilePath = "C:\\Study\\Magister\\Diploma\\Data";
         String apFileName = "ap.pcap" ;
         //String apFileName = "sta.pcap";
         //String apFileName = "packet6754.pcap";
@@ -30,16 +34,17 @@ public class Main {
         //String apFileName = "tcp_only.pcap";
         //String apFileName = "exported2.pcap" ;
 
-        String apFilePath = "C:\\Study\\Magister\\Diploma\\Data";
-        String apPcapFile =
-                new StringBuilder()
-                .append(apFilePath)
-                .append("\\")
-                .append(apFileName)
-                .toString();
+         apPcapFile = apFilePath + "\\" + apFileName;
 
-        find_1(staPcapFile);
-        //find_2(apPcapFile);
+        resultFile1 = "C:\\Study\\Magister\\Diploma\\Data\\"
+                + "time delta from previous captured frame. (packets from STA to AP) (STA side)"
+                + ".txt" ;
+        resultFile2 = "C:\\Study\\Magister\\Diploma\\Data\\"
+                + "time delta from previous captured frame. (packets from STA to AP) (AP side)"
+                + ".txt" ;
+
+        find_1();
+        find_2();
        // find_3_1(staPcapFile,apPcapFile);
        // find_3_2(staPcapFile,apPcapFile);
 
@@ -143,11 +148,11 @@ public class Main {
 
     }
     //1 time delta from previous captured frame. (packets from Station to AP) (Station side)
-    private static void  find_1 (String staPcapFile) throws PcapNativeException, NotOpenException {
+    private static void  find_1 () throws PcapNativeException, NotOpenException, IOException {
 
         PcapHandle staPh = Pcaps.openOffline(staPcapFile, PcapHandle.TimestampPrecision.NANO);
 
-        String staIP = "192.0.2.12";
+        FileWriter writer = new FileWriter(resultFile1,false);
         int packetNumber = 0;
         Packet packet = null;
         Timestamp previousCapturedFrameTime=null;
@@ -157,7 +162,7 @@ public class Main {
             boolean isFromStation=false;
             try {
                 IpV4Packet ipV4Packet = packet.get(IpV4Packet.class);
-                if(ipV4Packet.getHeader().getSrcAddr().equals(InetAddress.getByName(staIP)))
+                if(ipV4Packet.getHeader().getSrcAddr().equals(InetAddress.getByName(ConstantsIface.STA1_IPv4)))
                     isFromStation=true;
             }
             catch (Exception e){
@@ -166,31 +171,27 @@ public class Main {
             //If packet is from STA with IP 192.0.2.12
             if (isFromStation){
                 double time_delta=getTimeDelta(staPh.getTimestamp(),previousCapturedFrameTime);
-                System.out.println(String.format(packetNumber
-                        + " \nTime from previous captured frame = %.9f",time_delta));
-                //TODO export time_delta to somewhere
+//                System.out.println(String.format(packetNumber
+//                        + " \nTime from previous captured frame = %.9f",time_delta));
+                writer.write(String.format("%.9f\n",time_delta));
             }
             previousCapturedFrameTime=staPh.getTimestamp();
         }
+        writer.close();
         staPh.close();
+        System.out.println("time delta from previous captured frame. (packets from Station to AP) (Station side)");
         System.out.println(packetNumber + " packets have been read from " + staPcapFile);
         System.out.println();
 
     }
     //packet time delta from previous captured frame (Station to Access Point) (AP side)
-    private static void find_2 (String apPcapFile)throws PcapNativeException, NotOpenException {
+    private static void find_2 () throws PcapNativeException, NotOpenException, IOException {
         PcapHandle apPh = Pcaps.openOffline(apPcapFile, PcapHandle.TimestampPrecision.NANO);
 
+        FileWriter writer = new FileWriter(resultFile2,false);
         int packetNumber = 0;
         int filteredPackets=0;
         Packet packet = null;
-        //TODO make MACs as constants
-        //AP MAC
-        String MAC0="00c0ca98dfdf";//00:c0:ca:98:df:df
-        //Sta1
-        String MAC1 = "803049236661";//80:30:49:23:66:61
-        //Sta2
-        String MAC2 = "049226344fff";//04:92:26:34:4f:ff
 
         Timestamp previousCapturedFrameTime = null;
 
@@ -225,16 +226,17 @@ public class Main {
                     System.arraycopy(payload,wlanSaPos,byteWlanSa,0,wlanAddrLen);
                     String wlanSa = byteArrayToHex(byteWlanSa);
 //
-                    if (wlanSa.equals(MAC1)||wlanSa.equals(MAC2)){
-                        System.out.println("THIS IS OUR FRAME");
+                    if (wlanSa.equals(ConstantsIface.STA1_MAC)||wlanSa.equals(ConstantsIface.STA2_MAC)){
+//                        System.out.println("THIS IS OUR FRAME");
                         filteredPackets++;
                         double time_delta=getTimeDelta(apPh.getTimestamp(),previousCapturedFrameTime);
-                        System.out.println(String.format(packetNumber
-                                + " \nTime from previous captured frame = %.9f",time_delta));
-
-                        System.out.println("wlan source address: " + wlanSa);
-                        System.out.println("payload: "+ byteArrayToHex(payload));
-                        //TODO export time_delta to somewhere
+//                        System.out.println(String.format(packetNumber
+//                                + " \nTime from previous captured frame = %.9f",time_delta));
+//
+//                        System.out.println("wlan source address: " + wlanSa);
+//                        System.out.println("payload: "+ byteArrayToHex(payload));
+//                        System.out.println(String.format("%.9f",time_delta));
+                        writer.write(String.format("%.9f\n",time_delta));
                     }
                     else
                     {
@@ -254,6 +256,7 @@ public class Main {
         System.out.println(filteredPackets + " packets were captured from our stations " + apPcapFile);
         System.out.println(packetNumber + " packets have been read from " + apPcapFile);
         System.out.println();
+        writer.close();
         apPh.close();
     }
     //Time of processing WLAN traffic
