@@ -1,4 +1,5 @@
-
+// This program uses library from
+// https://github.com/kaitoy/pcap4j
 import org.pcap4j.core.*;
 import org.pcap4j.packet.*;
 import org.pcap4j.packet.namednumber.Dot11FrameType;
@@ -43,7 +44,7 @@ public class Main {
         find_3_2(staPcapFile,apPcapFile);
 
 
-// This part is to be deleted,rewritten or replaced with PcapManager class.
+// This part will be deleted,rewritten or replaced with PcapManager class.
 
         //readStaPcap(staPcapFile);
         //readApPcap(apPcapFile);
@@ -141,11 +142,12 @@ public class Main {
 //        //System.out.println(stringBuilder.toString());
 
     }
-    //1 time delta from previous captured frame. (packets from Station)
+    //1 time delta from previous captured frame. (packets from Station) (Station side)
     private static void  find_1 (String staPcapFile) throws PcapNativeException, NotOpenException {
 
         PcapHandle staPh = Pcaps.openOffline(staPcapFile, PcapHandle.TimestampPrecision.NANO);
 
+        String staIP = "192.0.2.12";
         int packetNumber = 0;
         Packet packet = null;
         Timestamp previousCapturedFrameTime=null;
@@ -155,7 +157,7 @@ public class Main {
             boolean isFromStation=false;
             try {
                 IpV4Packet ipV4Packet = packet.get(IpV4Packet.class);
-                if(ipV4Packet.getHeader().getSrcAddr().equals(InetAddress.getByName("192.0.2.12")))
+                if(ipV4Packet.getHeader().getSrcAddr().equals(InetAddress.getByName(staIP)))
                     isFromStation=true;
             }
             catch (Exception e){
@@ -182,7 +184,7 @@ public class Main {
         int packetNumber = 0;
         int filteredPackets=0;
         Packet packet = null;
-        //TODO make MACs as constants, or MACs as variables from function
+        //TODO make MACs as constants
         //AP MAC
         String MAC0="00c0ca98dfdf";//00:c0:ca:98:df:df
         //Sta1
