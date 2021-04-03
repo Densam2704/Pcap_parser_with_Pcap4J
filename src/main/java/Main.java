@@ -13,8 +13,7 @@ import java.util.concurrent.TimeoutException;
 
 public class Main {
 
-    public static String resultFile1;
-    public static String resultFile2;
+    public static String resultFiles[] = new String[ConstantsIface.NUMBER_OF_RESULT_FILES];
     public static String staPcapFile;
     public static String apPcapFile;
 
@@ -36,17 +35,30 @@ public class Main {
 
          apPcapFile = apFilePath + "\\" + apFileName;
 
-        resultFile1 = "C:\\Study\\Magister\\Diploma\\Data\\"
-                + "time delta from previous captured frame. (packets from STA to AP) (STA side)"
+        resultFiles[0] = "C:\\Study\\Magister\\Diploma\\Data\\Result files\\"
+                + "time delta from previous captured frame (packets from STA to AP) (STA side)"
                 + ".txt" ;
-        resultFile2 = "C:\\Study\\Magister\\Diploma\\Data\\"
-                + "time delta from previous captured frame. (packets from STA to AP) (AP side)"
+        resultFiles[1] = "C:\\Study\\Magister\\Diploma\\Data\\Result files\\"
+                + "frame lengths (only packets STA to AP) (STA side)"
                 + ".txt" ;
+        resultFiles[2] = "C:\\Study\\Magister\\Diploma\\Data\\Result files\\"
+                + "time delta from previous captured frame (packets from STA to AP) (AP side)"
+                + ".txt" ;
+        resultFiles[3] = "C:\\Study\\Magister\\Diploma\\Data\\Result files\\"
+                + "frame lengths (only packets STA to AP) (AP side)"
+                + ".txt" ;
+        resultFiles[4] = "C:\\Study\\Magister\\Diploma\\Data\\Result files\\"
+                + "delta 1 (tcp from sta to ap) = abs(arrival_time_STA - arrival_time_AP)"
+                + ".txt" ;
+        resultFiles[5] = "C:\\Study\\Magister\\Diploma\\Data\\Result files\\"
+                + "delta 2 (tcp from ap to sta) = abs(arrival_time_STA - arrival_time_AP)"
+                + ".txt" ;
+
 
         find_1();
         find_2();
-       // find_3_1(staPcapFile,apPcapFile);
-       // find_3_2(staPcapFile,apPcapFile);
+        find_3_1(staPcapFile,apPcapFile);
+        find_3_2(staPcapFile,apPcapFile);
 
 
 // This part will be deleted,rewritten or replaced with PcapManager class.
@@ -152,7 +164,8 @@ public class Main {
 
         PcapHandle staPh = Pcaps.openOffline(staPcapFile, PcapHandle.TimestampPrecision.NANO);
 
-        FileWriter writer = new FileWriter(resultFile1,false);
+        FileWriter timesWriter = new FileWriter(resultFiles[0],false);
+        FileWriter packetLengthWriter = new FileWriter(resultFiles[1],false);
         int packetNumber = 0;
         Packet packet = null;
         Timestamp previousCapturedFrameTime=null;
@@ -173,11 +186,13 @@ public class Main {
                 double time_delta=getTimeDelta(staPh.getTimestamp(),previousCapturedFrameTime);
 //                System.out.println(String.format(packetNumber
 //                        + " \nTime from previous captured frame = %.9f",time_delta));
-                writer.write(String.format("%.9f\n",time_delta));
+                timesWriter.write(String.format("%.9f\n",time_delta));
+                packetLengthWriter.write(String.format("%d\n",packet.length()));
             }
             previousCapturedFrameTime=staPh.getTimestamp();
         }
-        writer.close();
+        timesWriter.close();
+        packetLengthWriter.close();
         staPh.close();
         System.out.println("time delta from previous captured frame. (packets from Station to AP) (Station side)");
         System.out.println(packetNumber + " packets have been read from " + staPcapFile);
@@ -188,7 +203,8 @@ public class Main {
     private static void find_2 () throws PcapNativeException, NotOpenException, IOException {
         PcapHandle apPh = Pcaps.openOffline(apPcapFile, PcapHandle.TimestampPrecision.NANO);
 
-        FileWriter writer = new FileWriter(resultFile2,false);
+        FileWriter timesWriter = new FileWriter(resultFiles[2],false);
+        FileWriter packetLengthWriter = new FileWriter(resultFiles[3],false);
         int packetNumber = 0;
         int filteredPackets=0;
         Packet packet = null;
@@ -236,7 +252,8 @@ public class Main {
 //                        System.out.println("wlan source address: " + wlanSa);
 //                        System.out.println("payload: "+ byteArrayToHex(payload));
 //                        System.out.println(String.format("%.9f",time_delta));
-                        writer.write(String.format("%.9f\n",time_delta));
+                        timesWriter.write(String.format("%.9f\n",time_delta));
+                        packetLengthWriter.write(String.format("%d\n",packet.length()));
                     }
                     else
                     {
@@ -256,14 +273,17 @@ public class Main {
         System.out.println(filteredPackets + " packets were captured from our stations " + apPcapFile);
         System.out.println(packetNumber + " packets have been read from " + apPcapFile);
         System.out.println();
-        writer.close();
+        timesWriter.close();
+        packetLengthWriter.close();
         apPh.close();
     }
     //Time of processing WLAN traffic
     //Find delta 1. From STA to AP
-    private static boolean find_3_1(String staPcapFile, String apPcapFile) throws PcapNativeException, NotOpenException {
+    private static boolean find_3_1(String staPcapFile, String apPcapFile) throws PcapNativeException, NotOpenException, IOException {
 
         PcapHandle staPh = Pcaps.openOffline(staPcapFile, PcapHandle.TimestampPrecision.NANO);
+
+        FileWriter tcpTimeDeltaWriter = new FileWriter(resultFiles[4],false);
 
         //MACs for searching
         String saMac ="803049236661";//80:30:49:23:66:61
@@ -317,10 +337,15 @@ public class Main {
                             System.out.println("t1 nanos = " + apPh.getTimestamp().getNanos());
                             System.out.println("t2  = " + staPh.getTimestamp().getTime());
                             System.out.println("t2 nanos = " + staPh.getTimestamp().getNanos());
-                            System.out.println("delta1 = "+getTimeDelta(staPh.getTimestamp(),apPh.getTimestamp()));
-                            //TODO export these values somewhere
+                            double delta1 = getTimeDelta(staPh.getTimestamp(),apPh.getTimestamp());
+                            System.out.println("delta1 = "+String.valueOf(delta1));
+
+                            tcpTimeDeltaWriter.write(String.valueOf(delta1));
+
                             System.out.println(staPacketNum + " packets have been read from " + staPcapFile);
                             System.out.println();
+
+                            tcpTimeDeltaWriter.close();
                             staPh.close();
                             return true;
                         }
@@ -333,6 +358,8 @@ public class Main {
                 catch (Exception e){}
             }
         }
+
+        tcpTimeDeltaWriter.close();
         staPh.close();
         System.out.println(staPacketNum + " packets have been read from " + staPcapFile);
         System.out.println();
@@ -340,9 +367,12 @@ public class Main {
     }
 
     //find delta 2 ( FROM AP TO STA )
-    private static boolean find_3_2(String staPcapFile, String apPcapFile) throws PcapNativeException, NotOpenException {
+    private static boolean find_3_2(String staPcapFile, String apPcapFile) throws PcapNativeException,
+            NotOpenException, IOException {
 
         PcapHandle staPh = Pcaps.openOffline(staPcapFile, PcapHandle.TimestampPrecision.NANO);
+
+        FileWriter tcpTimeDeltaWriter = new FileWriter(resultFiles[5],false);
 
         //MACs for searching
         String staMac ="803049236661";//80:30:49:23:66:61
@@ -396,10 +426,15 @@ public class Main {
                             System.out.println("t1 nanos = " + apPh.getTimestamp().getNanos());
                             System.out.println("t2  = " + staPh.getTimestamp().getTime());
                             System.out.println("t2 nanos = " + staPh.getTimestamp().getNanos());
-                            System.out.println("delta2 = "+getTimeDelta(staPh.getTimestamp(),apPh.getTimestamp()));
-                            //TODO export these values somewhere
+                            double delta2 = getTimeDelta(staPh.getTimestamp(),apPh.getTimestamp());
+                            System.out.println("delta2 = "+delta2);
+
+                            tcpTimeDeltaWriter.write(String.valueOf(delta2));
+
                             System.out.println(staPacketNum + " packets have been read from " + staPcapFile);
                             System.out.println();
+
+                            tcpTimeDeltaWriter.close();
                             staPh.close();
                             return true;
                         }
@@ -412,6 +447,8 @@ public class Main {
                 catch (Exception e){}
             }
         }
+
+        tcpTimeDeltaWriter.close();
         staPh.close();
         System.out.println(staPacketNum + " packets have been read from " + staPcapFile);
         System.out.println();

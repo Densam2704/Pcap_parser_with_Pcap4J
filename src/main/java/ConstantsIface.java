@@ -11,4 +11,5 @@ public interface ConstantsIface {
     //Sta2
     //04:92:26:34:4f:ff
     public static final String STA2_MAC = "049226344fff";
+    public static final int NUMBER_OF_RESULT_FILES =10;
 }
