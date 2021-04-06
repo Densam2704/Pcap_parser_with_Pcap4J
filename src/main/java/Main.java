@@ -1,4 +1,4 @@
-// This program uses library from
+// This program uses library for reading PCAP files from
 // https://github.com/kaitoy/pcap4j
 import org.pcap4j.core.*;
 import org.pcap4j.packet.*;
@@ -46,20 +46,26 @@ public class Main {
                 + "frame lengths (only packets STA to AP) (AP side)"
                 + ".txt" ;
         resultFiles[4] = "C:\\Study\\Magister\\Diploma\\Data\\Result files\\"
-                + "delta 1 (tcp from sta to ap) = abs(arrival_time_STA - arrival_time_AP)"
+                + "delta1 t (tcp from sta to ap) = abs(arrival_time_STA - arrival_time_AP)"
                 + ".txt" ;
         resultFiles[5] = "C:\\Study\\Magister\\Diploma\\Data\\Result files\\"
-                + "delta 2 (tcp from ap to sta) = abs(arrival_time_STA - arrival_time_AP)"
+                + "delta2 t (tcp from ap to sta) = abs(arrival_time_STA - arrival_time_AP)"
                 + ".txt" ;
         resultFiles[6] = "C:\\Study\\Magister\\Diploma\\Data\\Result files\\"
-                + "error"
+                + "error = average(delta1,delta2)"
                 + ".txt" ;
 
 
+        //Functions searching for
+        //delta t tx
         find_1();
+        //delta t rx
         find_2();
+        //delta t 1
         find_3_1();
+        //delta t2
         find_3_2();
+        // epsilon
         find3_3();
 
 
@@ -188,7 +194,7 @@ public class Main {
                 double time_delta=getTimeDelta(staPh.getTimestamp(),previousCapturedFrameTime);
 //                System.out.println(String.format(packetNumber
 //                        + " \nTime from previous captured frame = %.9f",time_delta));
-                timesWriter.write(String.valueOf(time_delta) + "\n");
+                timesWriter.write(String.format("%.9f\n",time_delta).replaceAll(",", "."));
                 packetLengthWriter.write(String.valueOf(packet.length()) + "\n");
             }
             previousCapturedFrameTime=staPh.getTimestamp();
@@ -254,7 +260,7 @@ public class Main {
 //                        System.out.println("wlan source address: " + wlanSa);
 //                        System.out.println("payload: "+ byteArrayToHex(payload));
 //                        System.out.println(String.format("%.9f",time_delta));
-                        timesWriter.write(String.valueOf(time_delta) + "\n");
+                        timesWriter.write(String.format("%.9f\n",time_delta).replaceAll(",", "."));
                         packetLengthWriter.write(String.valueOf(packet.length()) + "\n");
                     }
                     else
@@ -292,7 +298,7 @@ public class Main {
         String daMac ="00c0ca98dfdf";//00:c0:ca:98:df:df
         int staPacketNum = 0;
         Packet staPacket = null;
-        Timestamp previousCapturedFrameTime=null;
+//        Timestamp previousCapturedFrameTime=null;
         //Timestamp previousDisplayedFrameTime=null;
         while ((staPacket = staPh.getNextPacket()) != null) {
             staPacketNum++;
