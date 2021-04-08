@@ -4,13 +4,16 @@ import org.pcap4j.core.*;
 import org.pcap4j.packet.*;
 import org.pcap4j.packet.namednumber.Dot11FrameType;
 
+import javax.sound.midi.Soundbank;
 import java.io.*;
 import java.net.InetAddress;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.concurrent.TimeoutException;
 
 public class Main {
 
+    public static ArrayList<TCPSession>sessions = new ArrayList<>();
     public static String resultFiles[] = new String[ConstantsIface.NUMBER_OF_RESULT_FILES];
     public static String staPcapFile;
     public static String apPcapFile;
@@ -74,6 +77,8 @@ public class Main {
 //        find3_3();
 
         find_sessions();
+
+
 
 
 // This part will be deleted,rewritten or replaced with PcapManager class.
@@ -589,6 +594,7 @@ public class Main {
         return null;
     }
 
+    //Find all sessions in apPcapFile
     private static void find_sessions() throws PcapNativeException, NotOpenException {
 
         PcapHandle apPh = Pcaps.openOffline(apPcapFile);
@@ -604,7 +610,7 @@ public class Main {
             try {
                 if (radiotapPacket != null) {
                     byte[] payload = radiotapPacket.getPayload().getRawData();
-                    int payloadLenth=payload.length;
+                    int payloadLength=payload.length;
 
                     Dot11FrameType type = Dot11FrameType.getInstance(
                             (byte) (((payload[0] << 2) & 0x30) | ((payload[0] >> 4) & 0x0F))
@@ -650,20 +656,48 @@ public class Main {
                                 //Position of ip and tcp in Radiotap Payload
                                 int ipPos=40;
                                 int tcpPos=ipPos+20;
-                                IpV4Packet ipV4Packet=IpV4Packet.newPacket(payload,ipPos,payloadLenth-ipPos);
+                                IpV4Packet ipV4Packet=IpV4Packet.newPacket(payload,ipPos,payloadLength-ipPos);
 
                                 // if ip packet contains tcp
                                 if (ipV4Packet.getHeader().getProtocol().toString().equals("6 (TCP)")){
 
                                     tcpCounter++;
-                                    TcpPacket tcpPacket=TcpPacket.newPacket(payload,tcpPos,payloadLenth-tcpPos);
-                                    //TODO export ip+port somewhere
-//                                    System.out.println("GOT TCP in packet " + apPacketCounter);
-//                                    System.out.println(ipV4Packet.getHeader().getDstAddr().getHostAddress());
-//                                    System.out.println(ipV4Packet.getHeader().getSrcAddr().getHostAddress());
+                                    TcpPacket tcpPacket=TcpPacket.newPacket(payload,tcpPos,payloadLength-tcpPos);
+
+                                    String ip1 = ipV4Packet.getHeader().getSrcAddr().getHostAddress();
+                                    String port1 = tcpPacket.getHeader().getSrcPort().toString();
+                                    String ip2 = ipV4Packet.getHeader().getDstAddr().getHostAddress();
+                                    String port2 = tcpPacket.getHeader().getDstPort().toString();
+
+                                    //Add to sessions arraylist.
+
+                                    int sessionsSize = sessions.size();
+                                    //If sessions arraylist is empty
+                                    if (sessionsSize == 0){
+                                        TCPSession session = new TCPSession(ip1,port1,ip2,port2);
+                                        sessions.add(session);
+                                        session.appendPacket(ipV4Packet,apPh.getTimestamp(),apPacketCounter);
+                                    }
+                                    //Else check in sessions arraylist
+                                    else {
+                                        for (int i = 0; i < sessionsSize; i++){
+                                            //if we have found already existing session
+                                            TCPSession tcpSession = sessions.get(i);
+                                            if (tcpSession.isInTheSession(ip1,port1,ip2,port2)){
+                                                //add packet to the session and break the cycle FOR
+                                                tcpSession.appendPacket(ipV4Packet,apPh.getTimestamp(),apPacketCounter);
+                                                break;
+                                            }
+                                            //All sessions were checked and this packet doesn't belong to any of them
+                                            if( i == sessionsSize - 1){
+                                                TCPSession session = new TCPSession(ip1,port1,ip2,port2);
+                                                sessions.add(session);
+                                                session.appendPacket(ipV4Packet,apPh.getTimestamp(),apPacketCounter);
+                                            }
+
+                                        }
+                                    }
                                 }
-//                                System.out.println("Got an IP Packet " + apPacketCounter);
-//                                System.out.println(ipV4Packet.toString());
                             }
 
                     }
@@ -674,9 +708,29 @@ public class Main {
             }
 
         }
+
+        for (TCPSession session:sessions){
+            System.out.println();
+            ArrayList<Long>packetNums=session.getPacketNums();
+            System.out.println("Amount of packets in session = " + packetNums.size());
+            for (long i : packetNums){
+                System.out.println("Packet "+i);
+            }
+            double dur = session.getSessionDuration();
+            if (dur>0)
+                System.out.println(" Session duration in seconds: "+dur);
+            else
+                System.out.println("Could not find session duration");
+            System.out.println();
+
+        }
+
+        System.out.println(sessions.size() + " TCP sessions were found");
+
         System.out.println();
         System.out.println(tcpCounter + " tcp packets were found in " + apPcapFile);
-        System.out.println("All " + apPacketCounter + " packets have been read from AP file " + apPcapFile );
+        System.out.println("All " + apPacketCounter + " packets were read from AP file " + apPcapFile );
+
         apPh.close();
 
     }
