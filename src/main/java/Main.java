@@ -56,6 +56,9 @@ public class Main {
         resultFiles[6] = "C:\\Study\\Magister\\Diploma\\Data\\Result files\\"
                 + "error = average(delta1,delta2)"
                 + ".txt" ;
+        resultFiles[7] = "C:\\Study\\Magister\\Diploma\\Data\\Result files\\"
+                + "tcp session duration"
+                + ".txt" ;
 
 
         //Functions searching for
@@ -302,12 +305,12 @@ public class Main {
         //MACs for searching
         String saMac ="803049236661";//80:30:49:23:66:61
         String daMac ="00c0ca98dfdf";//00:c0:ca:98:df:df
-        int staPacketNum = 0;
+        int staPacketCounter = 0;
         Packet staPacket = null;
 //        Timestamp previousCapturedFrameTime=null;
         //Timestamp previousDisplayedFrameTime=null;
         while ((staPacket = staPh.getNextPacket()) != null) {
-            staPacketNum++;
+            staPacketCounter++;
 
             boolean isFromStation=false;
             boolean isTCP=false;
@@ -338,7 +341,7 @@ public class Main {
                         checksumTCPBytes[1] = (byte) checksumTCP;
 
                         System.out.println("Found TCP packet from STA to AP in file " + staPcapFile+
-                                "\nPacket number "+staPacketNum);
+                                "\nPacket number "+staPacketCounter);
                         System.out.println("TCP checksum for verifying "+byteArrayToHex(checksumTCPBytes));
                         System.out.println("Now checking this TCP paket in "+apPcapFile);
 
@@ -356,7 +359,7 @@ public class Main {
 
                             tcpTimeDeltaWriter.write(String.valueOf(delta1) + "\n");
 
-                            System.out.println(staPacketNum + " packets have been read from " + staPcapFile);
+                            System.out.println(staPacketCounter + " packets have been read from " + staPcapFile);
                             System.out.println();
 
                             tcpTimeDeltaWriter.close();
@@ -375,7 +378,8 @@ public class Main {
 
         tcpTimeDeltaWriter.close();
         staPh.close();
-        System.out.println(staPacketNum + " packets have been read from " + staPcapFile);
+        System.out.println(staPacketCounter
+                + " packets have been read from " + staPcapFile);
         System.out.println();
         return false;
     }
@@ -391,12 +395,12 @@ public class Main {
         //MACs for searching
         String staMac ="803049236661";//80:30:49:23:66:61
         String apMac ="00c0ca98dfdf";//00:c0:ca:98:df:df
-        int staPacketNum = 0;
+        int staPacketCounter = 0;
         Packet staPacket = null;
         Timestamp previousCapturedFrameTime=null;
         //Timestamp previousDisplayedFrameTime=null;
         while ((staPacket = staPh.getNextPacket()) != null) {
-            staPacketNum++;
+            staPacketCounter++;
 
             boolean isFromStation=false;
             boolean isTCP=false;
@@ -427,7 +431,7 @@ public class Main {
                         checksumTCPBytes[1] = (byte) checksumTCP;
 
                         System.out.println("Found TCP packet from AP to STA in file " + staPcapFile+
-                                "\nPacket number "+staPacketNum);
+                                "\nPacket number "+staPacketCounter);
                         System.out.println("TCP checksum for verifying "+byteArrayToHex(checksumTCPBytes));
                         System.out.println("Now checking this TCP paket in "+apPcapFile);
 
@@ -444,7 +448,7 @@ public class Main {
                             System.out.println("delta2 = "+delta2);
 
                             tcpTimeDeltaWriter.write(String.valueOf(delta2) + "\n");
-                            System.out.println(staPacketNum + " packets have been read from " + staPcapFile);
+                            System.out.println(staPacketCounter + " packets have been read from " + staPcapFile);
                             System.out.println();
 
                             tcpTimeDeltaWriter.close();
@@ -463,10 +467,11 @@ public class Main {
 
         tcpTimeDeltaWriter.close();
         staPh.close();
-        System.out.println(staPacketNum + " packets have been read from " + staPcapFile);
+        System.out.println(staPacketCounter + " packets have been read from " + staPcapFile);
         System.out.println();
         return false;
     }
+    //function that reads values from each of 2 files  and finds average between 2 values
     private static void find3_3() throws IOException {
 
         FileReader fileReader1 = new FileReader(resultFiles[4]);
@@ -506,11 +511,11 @@ public class Main {
 
         PcapHandle apPh = Pcaps.openOffline(apPcapFile);
 
-        int apPacketNum = 0;
+        int apPacketCounter = 0;
         Packet packet = null;
 
         while ((packet= apPh.getNextPacket())!=null) {
-            apPacketNum++;
+            apPacketCounter++;
             RadiotapPacket radiotapPacket = packet.get(RadiotapPacket.class);
             try {
                 if (radiotapPacket != null) {
@@ -558,7 +563,7 @@ public class Main {
                                     payload[76]==checksumTCPBytes[0] && payload[77]==checksumTCPBytes[1]){
 
                                 System.out.println("TCP packet  was found in "+apPcapFile);
-                                System.out.println("Packet number in the file is " + apPacketNum);
+                                System.out.println("Packet number in the file is " + apPacketCounter);
 
                                 //TSFT. Not sure that we need this timestamp
 //                                //Now we are looking for TSFT
@@ -579,7 +584,7 @@ public class Main {
             catch (Exception e) {}
 
         }
-        System.out.println("All" + apPacketNum + " packets have been read from AP file" );
+        System.out.println("All" + apPacketCounter + " packets have been read from AP file" );
         apPh.close();
         return null;
     }
@@ -588,13 +593,13 @@ public class Main {
 
         PcapHandle apPh = Pcaps.openOffline(apPcapFile);
 
-        int apPacketNum = 0;
+        int apPacketCounter = 0;
         //for testing purposes
-        int tcpPacketNum= 0;
+        int tcpCounter= 0;
         Packet packet = null;
 
         while ((packet= apPh.getNextPacket())!=null) {
-            apPacketNum++;
+            apPacketCounter++;
             RadiotapPacket radiotapPacket = packet.get(RadiotapPacket.class);
             try {
                 if (radiotapPacket != null) {
@@ -650,14 +655,14 @@ public class Main {
                                 // if ip packet contains tcp
                                 if (ipV4Packet.getHeader().getProtocol().toString().equals("6 (TCP)")){
 
-                                    tcpPacketNum++;
+                                    tcpCounter++;
                                     TcpPacket tcpPacket=TcpPacket.newPacket(payload,tcpPos,payloadLenth-tcpPos);
                                     //TODO export ip+port somewhere
-//                                    System.out.println("GOT TCP in packet " + apPacketNum);
+//                                    System.out.println("GOT TCP in packet " + apPacketCounter);
 //                                    System.out.println(ipV4Packet.getHeader().getDstAddr().getHostAddress());
 //                                    System.out.println(ipV4Packet.getHeader().getSrcAddr().getHostAddress());
                                 }
-//                                System.out.println("Got an IP Packet " + apPacketNum);
+//                                System.out.println("Got an IP Packet " + apPacketCounter);
 //                                System.out.println(ipV4Packet.toString());
                             }
 
@@ -670,8 +675,8 @@ public class Main {
 
         }
         System.out.println();
-        System.out.println(tcpPacketNum + " tcp packets were found in " + apPcapFile);
-        System.out.println("All " + apPacketNum + " packets have been read from AP file " + apPcapFile );
+        System.out.println(tcpCounter + " tcp packets were found in " + apPcapFile);
+        System.out.println("All " + apPacketCounter + " packets have been read from AP file " + apPcapFile );
         apPh.close();
 
     }
