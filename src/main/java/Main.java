@@ -32,7 +32,9 @@ public class Main {
         //String apFileName = "exported2.pcap" ;
 
          apPcapFile = apFilePath + "\\" + apFileName;
-
+//TODO Make resultFileNames ArrayList and cycle for initialising files
+        //TODO Create directory if doesn't exist
+        //
         resultFiles[0] = "C:\\Study\\Magister\\Diploma\\Data\\Result files\\"
                 + "time delta from previous captured frame (only packets from STA to AP) (STA side)"
                 + ".txt" ;
@@ -58,15 +60,17 @@ public class Main {
 
         //Functions searching for
         //delta t tx
-        find_1();
-        //delta t rx
-        find_2();
-        //delta t 1
-        find_3_1();
-        //delta t2
-        find_3_2();
-        // epsilon
-        find3_3();
+//        find_1();
+//        //delta t rx
+//        find_2();
+//        //delta t 1
+//        find_3_1();
+//        //delta t2
+//        find_3_2();
+//        // epsilon
+//        find3_3();
+
+        find_sessions();
 
 
 // This part will be deleted,rewritten or replaced with PcapManager class.
@@ -195,6 +199,7 @@ public class Main {
 //                System.out.println(String.format(packetNumber
 //                        + " \nTime from previous captured frame = %.9f",time_delta));
                 timesWriter.write(String.format("%.9f\n",time_delta).replaceAll(",", "."));
+                //TODO Should I write only STA to AP lengths from STA dump file ???
                 packetLengthWriter.write(String.valueOf(packet.length()) + "\n");
             }
             previousCapturedFrameTime=staPh.getTimestamp();
@@ -261,6 +266,7 @@ public class Main {
 //                        System.out.println("payload: "+ byteArrayToHex(payload));
 //                        System.out.println(String.format("%.9f",time_delta));
                         timesWriter.write(String.format("%.9f\n",time_delta).replaceAll(",", "."));
+                        //TODO Should I write only STA to AP lengths from AP dump file ???
                         packetLengthWriter.write(String.valueOf(packet.length()) + "\n");
                     }
                     else
@@ -577,7 +583,100 @@ public class Main {
         apPh.close();
         return null;
     }
-    //sample
+
+    private static void find_sessions() throws PcapNativeException, NotOpenException {
+
+        PcapHandle apPh = Pcaps.openOffline(apPcapFile);
+
+        int apPacketNum = 0;
+        //for testing purposes
+        int tcpPacketNum= 0;
+        Packet packet = null;
+
+        while ((packet= apPh.getNextPacket())!=null) {
+            apPacketNum++;
+            RadiotapPacket radiotapPacket = packet.get(RadiotapPacket.class);
+            try {
+                if (radiotapPacket != null) {
+                    byte[] payload = radiotapPacket.getPayload().getRawData();
+                    int payloadLenth=payload.length;
+
+                    Dot11FrameType type = Dot11FrameType.getInstance(
+                            (byte) (((payload[0] << 2) & 0x30) | ((payload[0] >> 4) & 0x0F))
+                    );
+                    //Looking only for  IEEE802.11 data frames in a Type/Subtype field
+                    if(type.value()==0x0020) {
+//                        case 0x0020:
+//                          //IEEE802.11 data frames
+//                            System.out.println("Wlan data frame");
+
+
+                            short wlanAddrLen=6;
+                            //Destination address position in payload
+                            short wlanDaPos=4;
+                            //Source address position in payload in case of 3 addresses used in WLAN frame
+                            short wlanSaPos=10;
+
+                            //There is a case when source address is a 4th address in a WLAN frame
+                            if (payload[0]==0x08 && payload[1]==0x42){
+                                wlanSaPos=16;
+                            }
+
+                            byte[]byteWlanSa = new byte [wlanAddrLen];
+                            System.arraycopy(payload,wlanSaPos,byteWlanSa,0,wlanAddrLen);
+                            String wlanSa = byteArrayToHex(byteWlanSa);
+
+                            byte[]byteWlanDa = new byte [wlanAddrLen];
+                            System.arraycopy(payload,wlanDaPos,byteWlanDa,0,wlanAddrLen);
+                            String wlanDa = byteArrayToHex(byteWlanDa);
+
+                            //If SA and DA in both AP and STA are equal and
+                            //If checksums in both AP and STA packets are equal
+                            //then we have found exactly the same packet
+                            //in AP file. And we can take timestamp from this packet
+
+                            // If traffic belongs to our STAs or to our AP
+                            if ( (wlanDa.equals(ConstantsIface.STA1_MAC) || wlanDa.equals(ConstantsIface.STA2_MAC))
+                                    && wlanSa.equals(ConstantsIface.AP_MAC)
+                                                    ||
+                                wlanDa.equals(ConstantsIface.AP_MAC) &&
+                                        (wlanSa.equals(ConstantsIface.STA1_MAC) || wlanSa.equals(ConstantsIface.STA2_MAC))
+                            ){
+                                //Position of ip and tcp in Radiotap Payload
+                                int ipPos=40;
+                                int tcpPos=ipPos+20;
+                                IpV4Packet ipV4Packet=IpV4Packet.newPacket(payload,ipPos,payloadLenth-ipPos);
+
+                                // if ip packet contains tcp
+                                if (ipV4Packet.getHeader().getProtocol().toString().equals("6 (TCP)")){
+
+                                    tcpPacketNum++;
+                                    TcpPacket tcpPacket=TcpPacket.newPacket(payload,tcpPos,payloadLenth-tcpPos);
+                                    //TODO export ip+port somewhere
+//                                    System.out.println("GOT TCP in packet " + apPacketNum);
+//                                    System.out.println(ipV4Packet.getHeader().getDstAddr().getHostAddress());
+//                                    System.out.println(ipV4Packet.getHeader().getSrcAddr().getHostAddress());
+                                }
+//                                System.out.println("Got an IP Packet " + apPacketNum);
+//                                System.out.println(ipV4Packet.toString());
+                            }
+
+                    }
+                }
+            }
+            catch (Exception e) {
+//                System.out.println(" Exception in find_sessions: " +e.getMessage());
+            }
+
+        }
+        System.out.println();
+        System.out.println(tcpPacketNum + " tcp packets were found in " + apPcapFile);
+        System.out.println("All " + apPacketNum + " packets have been read from AP file " + apPcapFile );
+        apPh.close();
+
+    }
+
+    //sample. TODO Delete it. When I finish the program
     private static void readStaPcap(String staPcapFile) throws PcapNativeException, NotOpenException {
         PcapHandle staPh = Pcaps.openOffline(staPcapFile, PcapHandle.TimestampPrecision.NANO);
        // PcapManager staPcapManager = new PcapManager(staPcapFile,ConstantsIface.STATION);
@@ -680,6 +779,7 @@ public class Main {
         apPh.close();
 
     }
+
     //Convert byte array to string
     //https://stackoverflow.com/questions/9655181/how-to-convert-a-byte-array-to-a-hex-string-in-java
     public static String byteArrayToHex(byte[] a) {
