@@ -10,7 +10,7 @@ public interface ConstantsIface {
     public static final String resultFnames [] = new String[NUMBER_OF_RESULT_FILES];
     public static final String resultFiles[] = new String[NUMBER_OF_RESULT_FILES];
 
-    public static final boolean APPEND_TO_FILE = true;
+    public static final boolean APPEND_TO_FILE = false;
 
     public static final String STA1_IPv4 = "192.0.2.12";
     //AP MAC

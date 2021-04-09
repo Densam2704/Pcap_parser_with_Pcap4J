@@ -33,6 +33,7 @@ public class Main implements ConstantsIface{
 //        // epsilon
 //        find3_3();
 
+        init();
         find_sessions();
 
 
@@ -160,9 +161,8 @@ public class Main implements ConstantsIface{
         resultFnames[6] = "error = average(delta1,delta2)";
 
         resultFnames[7] = "tcp session duration";
-        resultFnames[8] = "packet interval in sessions";
+        resultFnames[8] = "packet intervals in sessions";
         resultFnames[9] = "packet lengths in sessions";
-        resultFnames[10] = "NONAME";
 
         for (short i = 0; i < NUMBER_OF_RESULT_FILES; i++){
             resultFiles[i]=RESULTS_PATH + "\\"+resultFnames[i]+".txt";
@@ -355,7 +355,7 @@ public class Main implements ConstantsIface{
                             double delta1 = getTimeDelta(staPh.getTimestamp(),apPh.getTimestamp());
                             System.out.println("delta1 = "+String.valueOf(delta1));
 
-                            tcpTimeDeltaWriter.write(String.valueOf(delta1) + "\n");
+                            tcpTimeDeltaWriter.write(String.format("%.9f\n",delta1).replaceAll(",", "."));
 
                             System.out.println(staPacketCounter + " packets have been read from " + staPcapFile);
                             System.out.println();
@@ -445,7 +445,7 @@ public class Main implements ConstantsIface{
                             double delta2 = getTimeDelta(staPh.getTimestamp(),apPh.getTimestamp());
                             System.out.println("delta2 = "+delta2);
 
-                            tcpTimeDeltaWriter.write(String.valueOf(delta2) + "\n");
+                            tcpTimeDeltaWriter.write(String.format("%.9f\n",delta2).replaceAll(",", "."));
                             System.out.println(staPacketCounter + " packets have been read from " + staPcapFile);
                             System.out.println();
 
@@ -490,7 +490,7 @@ public class Main implements ConstantsIface{
 
             System.out.println(" Counted error = " + error);
 
-            writer.write(String.valueOf(error) + "\n");
+            writer.write(String.format("%.9f\n",error).replaceAll(",", "."));
 
             // считываем остальные строки в цикле
             delta1 = reader1.readLine();
@@ -588,7 +588,7 @@ public class Main implements ConstantsIface{
     }
 
     //Find all sessions in apPcapFile
-    private static void find_sessions() throws PcapNativeException, NotOpenException {
+    private static void find_sessions() throws PcapNativeException, NotOpenException, IOException {
 
         PcapHandle apPh = Pcaps.openOffline(apPcapFile);
 
@@ -702,21 +702,58 @@ public class Main implements ConstantsIface{
 
         }
 
+        FileWriter durWriter = new FileWriter(resultFiles[7],APPEND_TO_FILE);
+        FileWriter intervalWriter = new FileWriter(resultFiles[8],APPEND_TO_FILE);
+        FileWriter pktLengthsWriter = new FileWriter(resultFiles[9],APPEND_TO_FILE);
+
         for (TCPSession session:sessions){
-            System.out.println();
-            ArrayList<Long>packetNums=session.getPacketNums();
-            System.out.println("Amount of packets in session = " + packetNums.size());
-            for (long i : packetNums){
-                System.out.println("Packet "+i);
+
+            //Packet Lengths
+            ArrayList<IpV4Packet>pkts = session.getIpV4Packets();
+            for (IpV4Packet pkt:pkts){
+                System.out.println("Packet length = "+pkt.getHeader().getTotalLengthAsInt());
+                pktLengthsWriter.write(String.format("%d\n",pkt.getHeader().getTotalLengthAsInt()));
             }
+            //Splitter between sessions
+            pktLengthsWriter.write("\n");
+
+            //Intervals
+            Timestamp prevPacketTmstmp = null;
+            ArrayList<Timestamp>tmstmps = session.getPacketTimestamps();
+            for(Timestamp tmstmp:tmstmps){
+                Double interval = getTimeDelta(tmstmp,prevPacketTmstmp);
+                prevPacketTmstmp=tmstmp;
+                System.out.println("interval " + String.format("%.9f",interval).replaceAll(",", "."));
+                intervalWriter.write(String.format("%f.9\n",interval).replaceAll(",","."));
+            }
+            //Splitter between sessions
+            intervalWriter.write("\n");
+
+
+//            ArrayList<Long>packetNums=session.getPacketNums();
+            System.out.println("Amount of packets in session = " + pkts.size());
+//            for (long i : packetNums){
+//                System.out.println("Packet "+i);
+//            }
+
+            //Session duration
             double dur = session.getSessionDuration();
-            if (dur>0)
-                System.out.println(" Session duration in seconds: "+dur);
-            else
-                System.out.println("Could not find session duration");
+            if (dur>0){
+//                System.out.println(" Session duration in seconds: "+dur);
+                durWriter.write(String.format("%.9f\n",dur).replaceAll(",", "."));
+            }
+            else{
+//                System.out.println("Could not find session duration");
+                //TODO Should i write anything if duration was not found?
+                durWriter.write("null\n");
+            }
+
             System.out.println();
 
         }
+        durWriter.close();
+        intervalWriter.close();
+        pktLengthsWriter.close();
 
         System.out.println(sessions.size() + " TCP sessions were found");
 
