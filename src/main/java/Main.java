@@ -11,57 +11,14 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.concurrent.TimeoutException;
 
-public class Main {
+public class Main implements ConstantsIface{
 
     public static ArrayList<TCPSession>sessions = new ArrayList<>();
-    public static String resultFiles[] = new String[ConstantsIface.NUMBER_OF_RESULT_FILES];
     public static String staPcapFile;
     public static String apPcapFile;
 
     public static void main(String[] args) throws PcapNativeException, NotOpenException, IOException {
 
-
-        String staFilepath = "C:\\Study\\Magister\\Diploma\\Data";
-        String staFilename = "sta.pcap";
-         staPcapFile = staFilepath + "\\" + staFilename;
-
-
-        String apFilePath = "C:\\Study\\Magister\\Diploma\\Data";
-        String apFileName = "ap.pcap" ;
-        //String apFileName = "sta.pcap";
-        //String apFileName = "packet6754.pcap";
-        //String apFileName = "decrypted2.pcap" ;
-        //String apFileName = "tcp_only.pcap";
-        //String apFileName = "exported2.pcap" ;
-
-         apPcapFile = apFilePath + "\\" + apFileName;
-//TODO Make resultFileNames ArrayList and cycle for initialising files
-        //TODO Create directory if doesn't exist
-        //
-        resultFiles[0] = "C:\\Study\\Magister\\Diploma\\Data\\Result files\\"
-                + "time delta from previous captured frame (only packets from STA to AP) (STA side)"
-                + ".txt" ;
-        resultFiles[1] = "C:\\Study\\Magister\\Diploma\\Data\\Result files\\"
-                + "frame lengths (only packets STA to AP) (STA side)"
-                + ".txt" ;
-        resultFiles[2] = "C:\\Study\\Magister\\Diploma\\Data\\Result files\\"
-                + "time delta from previous captured frame (only packets from STA to AP) (AP side)"
-                + ".txt" ;
-        resultFiles[3] = "C:\\Study\\Magister\\Diploma\\Data\\Result files\\"
-                + "frame lengths (only packets STA to AP) (AP side)"
-                + ".txt" ;
-        resultFiles[4] = "C:\\Study\\Magister\\Diploma\\Data\\Result files\\"
-                + "delta1 t (tcp from sta to ap) = abs(arrival_time_STA - arrival_time_AP)"
-                + ".txt" ;
-        resultFiles[5] = "C:\\Study\\Magister\\Diploma\\Data\\Result files\\"
-                + "delta2 t (tcp from ap to sta) = abs(arrival_time_STA - arrival_time_AP)"
-                + ".txt" ;
-        resultFiles[6] = "C:\\Study\\Magister\\Diploma\\Data\\Result files\\"
-                + "error = average(delta1,delta2)"
-                + ".txt" ;
-        resultFiles[7] = "C:\\Study\\Magister\\Diploma\\Data\\Result files\\"
-                + "tcp session duration"
-                + ".txt" ;
 
 
         //Functions searching for
@@ -81,7 +38,7 @@ public class Main {
 
 
 
-// This part will be deleted,rewritten or replaced with PcapManager class.
+// This part will be deleted,rewritten or replaced
 
         //readStaPcap(staPcapFile);
         //readApPcap(apPcapFile);
@@ -179,6 +136,40 @@ public class Main {
 //        //System.out.println(stringBuilder.toString());
 
     }
+    public static void init (){
+
+        String staFilename = "sta.pcap";
+        staPcapFile = STA_DUMP_PATH + "\\" + staFilename;
+
+        String apFileName = "ap.pcap" ;
+        //String apFileName = "sta.pcap";
+        //String apFileName = "packet6754.pcap";
+        //String apFileName = "decrypted2.pcap" ;
+        //String apFileName = "tcp_only.pcap";
+        //String apFileName = "exported2.pcap" ;
+
+        apPcapFile = AP_DUMP_PATH + "\\" + apFileName;
+
+        // File names for result files
+        resultFnames[0] = "time delta from previous captured frame (only packets from STA to AP) (STA side)";
+        resultFnames[1] = "frame lengths (only packets STA to AP) (STA side)";
+        resultFnames[2] = "time delta from previous captured frame (only packets from STA to AP) (AP side)";
+        resultFnames[3] = "frame lengths (only packets STA to AP) (AP side)";
+        resultFnames[4] = "delta1 t (tcp from sta to ap) = abs(arrival_time_STA - arrival_time_AP)";
+        resultFnames[5] = "delta2 t (tcp from ap to sta) = abs(arrival_time_STA - arrival_time_AP)";
+        resultFnames[6] = "error = average(delta1,delta2)";
+
+        resultFnames[7] = "tcp session duration";
+        resultFnames[8] = "packet interval in sessions";
+        resultFnames[9] = "packet lengths in sessions";
+        resultFnames[10] = "NONAME";
+
+        for (short i = 0; i < NUMBER_OF_RESULT_FILES; i++){
+            resultFiles[i]=RESULTS_PATH + "\\"+resultFnames[i]+".txt";
+
+        }
+    }
+
     //1 time delta from previous captured frame. (packets from Station to AP) (Station side)
     private static void  find_1 () throws PcapNativeException, NotOpenException, IOException {
 
@@ -195,11 +186,11 @@ public class Main {
             boolean isFromStation=false;
             try {
                 IpV4Packet ipV4Packet = packet.get(IpV4Packet.class);
-                if(ipV4Packet.getHeader().getSrcAddr().equals(InetAddress.getByName(ConstantsIface.STA1_IPv4)))
+                if(ipV4Packet.getHeader().getSrcAddr().equals(InetAddress.getByName(STA1_IPv4)))
                     isFromStation=true;
             }
             catch (Exception e){
-
+                System.out.println("Exception in find_1 " + e.getMessage());
             }
             //If packet is from STA with IP 192.0.2.12
             if (isFromStation){
@@ -263,7 +254,7 @@ public class Main {
                     System.arraycopy(payload,wlanSaPos,byteWlanSa,0,wlanAddrLen);
                     String wlanSa = byteArrayToHex(byteWlanSa);
 //
-                    if (wlanSa.equals(ConstantsIface.STA1_MAC)||wlanSa.equals(ConstantsIface.STA2_MAC)){
+                    if (wlanSa.equals(STA1_MAC)||wlanSa.equals(STA2_MAC)){
 //                        System.out.println("THIS IS OUR FRAME");
                         filteredPackets++;
                         double time_delta=getTimeDelta(apPh.getTimestamp(),previousCapturedFrameTime);
@@ -287,7 +278,9 @@ public class Main {
                 }
 
             }
-            catch (Exception e){}
+            catch (Exception e){
+                System.out.println("Exception in find_2 " + e.getMessage());
+            }
 
             previousCapturedFrameTime=apPh.getTimestamp();
 
@@ -647,11 +640,11 @@ public class Main {
                             //in AP file. And we can take timestamp from this packet
 
                             // If traffic belongs to our STAs or to our AP
-                            if ( (wlanDa.equals(ConstantsIface.STA1_MAC) || wlanDa.equals(ConstantsIface.STA2_MAC))
-                                    && wlanSa.equals(ConstantsIface.AP_MAC)
+                            if ( (wlanDa.equals(STA1_MAC) || wlanDa.equals(STA2_MAC))
+                                    && wlanSa.equals(AP_MAC)
                                                     ||
-                                wlanDa.equals(ConstantsIface.AP_MAC) &&
-                                        (wlanSa.equals(ConstantsIface.STA1_MAC) || wlanSa.equals(ConstantsIface.STA2_MAC))
+                                wlanDa.equals(AP_MAC) &&
+                                        (wlanSa.equals(STA1_MAC) || wlanSa.equals(STA2_MAC))
                             ){
                                 //Position of ip and tcp in Radiotap Payload
                                 int ipPos=40;
@@ -738,7 +731,7 @@ public class Main {
     //sample. TODO Delete it. When I finish the program
     private static void readStaPcap(String staPcapFile) throws PcapNativeException, NotOpenException {
         PcapHandle staPh = Pcaps.openOffline(staPcapFile, PcapHandle.TimestampPrecision.NANO);
-       // PcapManager staPcapManager = new PcapManager(staPcapFile,ConstantsIface.STATION);
+       // PcapManager staPcapManager = new PcapManager(staPcapFile,STATION);
 
         //ArrayList<Packet> packets = new ArrayList<>();
 

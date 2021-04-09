@@ -19,7 +19,7 @@ public class TCPSession {
     public static Double getTimeDelta(Timestamp currFrameTime, Timestamp previousFrameTime) {
         double time_delta = 0;
 
-        //If previous frame didn't have time delta
+        //If previous frame didn't have arrival time
         if (previousFrameTime != null) {
 
             int deltaInMs = (int) Math.abs(previousFrameTime.getTime() - currFrameTime.getTime());
