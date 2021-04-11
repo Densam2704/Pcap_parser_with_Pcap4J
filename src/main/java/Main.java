@@ -20,6 +20,7 @@ public class Main implements ConstantsIface{
     public static void main(String[] args) throws PcapNativeException, NotOpenException, IOException {
 
 
+        init();
 
         //Functions searching for
         //delta t tx
@@ -33,7 +34,6 @@ public class Main implements ConstantsIface{
 //        // epsilon
 //        find3_3();
 
-        init();
         find_sessions();
 
 
@@ -125,19 +125,13 @@ public class Main implements ConstantsIface{
 ////            }
 //
 //        }
-//        System.out.println(packetNumber + " packets have been read from " + apPcapFile);
-//        //String builder from example
-////        StringBuilder stringBuilder = new StringBuilder(1000);
-////        stringBuilder.append(ap_ph.getNextPacket().toString())
-////                .append(System.getProperty("line.separator"))
-////                .append(ap_ph.getNextPacket().toString());
-////
-////        ap_ph.close();
-//
-//        //System.out.println(stringBuilder.toString());
 
     }
+
+    //Initialisation of filenames
     public static void init (){
+
+        //TODO Make cycle for reading multiple dump files from both sides.
 
         String staFilename = "sta.pcap";
         staPcapFile = STA_DUMP_PATH + "\\" + staFilename;
@@ -198,7 +192,7 @@ public class Main implements ConstantsIface{
 //                System.out.println(String.format(packetNumber
 //                        + " \nTime from previous captured frame = %.9f",time_delta));
                 timesWriter.write(String.format("%.9f\n",time_delta).replaceAll(",", "."));
-                //TODO Should I write only STA to AP lengths from STA dump file ???
+                // No need in writing this:
                 packetLengthWriter.write(String.valueOf(packet.length()) + "\n");
             }
             previousCapturedFrameTime=staPh.getTimestamp();
@@ -265,7 +259,7 @@ public class Main implements ConstantsIface{
 //                        System.out.println("payload: "+ byteArrayToHex(payload));
 //                        System.out.println(String.format("%.9f",time_delta));
                         timesWriter.write(String.format("%.9f\n",time_delta).replaceAll(",", "."));
-                        //TODO Should I write only STA to AP lengths from AP dump file ???
+                        //No need in writing this
                         packetLengthWriter.write(String.valueOf(packet.length()) + "\n");
                     }
                     else
