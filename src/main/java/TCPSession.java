@@ -15,12 +15,46 @@ public class TCPSession {
     ArrayList<Timestamp>packetTimestamps = new ArrayList<Timestamp>();
     ArrayList <Long> packetNums = new ArrayList<>();
 
+    //Checks if last added packet in session is added more than 1 day ago
+    public boolean isSessionTooLong(Timestamp currPktTimestamp){
+
+        Timestamp lastTmstmpInSession = packetTimestamps.get(packetTimestamps.size()-1);
+        //if  last packet in session was added into the session more than 1 day ago
+        if (getTimeDelta(currPktTimestamp,lastTmstmpInSession)>3600*24){
+            return true;
+        }
+        return false;
+    }
+
+    //Look for FYN tcp. Returns true if FYN is found.
+    public boolean checkIsFinished(){
+        int len = ipV4Packets.size();
+        //If we don't find FIN in 10 last packets then there is likely no FIN
+        int breakAfter = (len - 1) - 10;
+        for (int i = len-1 ; i>=0; i--) {
+            //TCP session ends with FIN
+            IpV4Packet ipPkt1 = ipV4Packets.get(i);
+            try {
+                TcpPacket tcpPkt1 = TcpPacket.newPacket(ipPkt1.getPayload().getRawData(), 0, ipPkt1.getPayload().length());
+                if (tcpPkt1.getHeader().getFin()) {
+                     return true;
+                }
+            } catch (IllegalRawDataException e) {
+                e.printStackTrace();
+            }
+            if (i == breakAfter){
+                break;
+            }
+        }
+        return false;
+    }
+
     //Get Time delta between 2 timestamps
-    public static Double getTimeDelta(Timestamp currFrameTime, Timestamp previousFrameTime) {
+    public Double getTimeDelta(Timestamp currFrameTime, Timestamp previousFrameTime) {
         double time_delta = 0;
 
         //If previous frame didn't have arrival time
-        if (previousFrameTime != null) {
+        if (previousFrameTime != null && currFrameTime!= null) {
 
             int deltaInMs = (int) Math.abs(previousFrameTime.getTime() - currFrameTime.getTime());
             //If delta in seconds is > 0 then we should count seconds together with nano seconds
@@ -51,7 +85,8 @@ public class TCPSession {
 
     //get timestamp of start (TCP handshake)
     public Timestamp getSessionStartTime() {
-        Timestamp timestamp=null;
+        //if there is no handshake, then we will take timestamp of the first packet
+        Timestamp timestamp=packetTimestamps.get(0);
 
         int len = ipV4Packets.size()-2;
         for (int i = 0 ; i<len; i++){
@@ -75,6 +110,7 @@ public class TCPSession {
                                 0,ipPkt3.getPayload().length());
                         //ACK
                         if(tcpPkt3.getHeader().getAck()){
+                            //return timestamp of handshake
                             return timestamp=packetTimestamps.get(i+2);
                         }
                     }
@@ -85,15 +121,16 @@ public class TCPSession {
 
         }
 
+
         return timestamp;
     }
 
     //get timestamp of end (TCP FIN)
     public Timestamp getSessionEndTime(){
-        Timestamp timestamp=null;
-
+        //If there is no FIN, we will take time of the last packet
+        Timestamp timestamp=packetTimestamps.get(packetTimestamps.size()-1);
         int len = ipV4Packets.size();
-        for (int i = 0 ; i<len; i++) {
+        for (int i = len-1 ; i>=0; i--) {
             //TCP session ends with FIN
             IpV4Packet ipPkt1 = ipV4Packets.get(i);
             try {

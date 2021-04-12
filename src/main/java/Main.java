@@ -1,14 +1,17 @@
 // This program uses library for reading PCAP files from
 // https://github.com/kaitoy/pcap4j
+import org.apache.commons.io.filefilter.FileFileFilter;
 import org.pcap4j.core.*;
 import org.pcap4j.packet.*;
 import org.pcap4j.packet.namednumber.Dot11FrameType;
-
-import javax.sound.midi.Soundbank;
+import org.apache.commons.io.comparator.LastModifiedFileComparator;
 import java.io.*;
 import java.net.InetAddress;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.concurrent.TimeoutException;
 
 public class Main implements ConstantsIface{
@@ -16,11 +19,56 @@ public class Main implements ConstantsIface{
     public static ArrayList<TCPSession>sessions = new ArrayList<>();
     public static String staPcapFile;
     public static String apPcapFile;
+    public static ArrayList<File> apFiles = new ArrayList<>();
+    public static ArrayList<File> staFiles = new ArrayList<>();
+    public static  boolean APPEND_TO_FILE = false;
+    public static Timestamp lastReadTimestamp = null;
 
     public static void main(String[] args) throws PcapNativeException, NotOpenException, IOException {
 
 
         init();
+        System.out.println(apFiles.size() + " pcap files have been found in " + AP_DUMP_PATH);
+        System.out.println(staFiles.size() + " pcap files have been found in " + STA_DUMP_PATH);
+
+        int num=0;
+        for (File apFile:apFiles){
+            System.out.println("\nReading file "+ ++num + " out of " + apFiles.size());
+            apPcapFile = AP_DUMP_PATH + "\\" + apFile.getName();
+            find_sessions();
+
+            int sessionSize = sessions.size();
+            TCPSession session;
+            ArrayList<TCPSession>finishedSessions= new ArrayList<>();
+            //Look for finished sessions and write them to file
+            for (int i = 0 ; i < sessionSize; i++){
+                session=sessions.get(i);
+                //If the session was finished or if the last added packet was added too long ago
+                if (session.checkIsFinished()||session.isSessionTooLong(lastReadTimestamp)){
+                    analiseSession(session);
+                    APPEND_TO_FILE=true;
+                    finishedSessions.add(session);
+                }
+            }
+            //Delete finished sessions
+            System.out.println(finishedSessions.size() + " finished sessions have been closed");
+            for (TCPSession finished: finishedSessions){
+                sessions.remove(finished);
+            }
+            finishedSessions=null;
+        }
+
+        int sessionSize = sessions.size();
+        TCPSession session;
+        for (int i = 0 ; i < sessionSize; i++){
+            session=sessions.get(i);
+                analiseSession(session);
+        }
+//        for (File staFile:staFiles){
+//            staPcapFile = STA_DUMP_PATH + "\\" + staFile.getName();
+//        }
+
+
 
         //Functions searching for
         //delta t tx
@@ -34,7 +82,7 @@ public class Main implements ConstantsIface{
 //        // epsilon
 //        find3_3();
 
-        find_sessions();
+//        find_sessions();
 
 
 
@@ -129,21 +177,12 @@ public class Main implements ConstantsIface{
     }
 
     //Initialisation of filenames
-    public static void init (){
+    public static void init () throws IOException {
 
-        //TODO Make cycle for reading multiple dump files from both sides.
 
-        String staFilename = "sta.pcap";
-        staPcapFile = STA_DUMP_PATH + "\\" + staFilename;
-
-        String apFileName = "ap.pcap" ;
-        //String apFileName = "sta.pcap";
-        //String apFileName = "packet6754.pcap";
-        //String apFileName = "decrypted2.pcap" ;
-        //String apFileName = "tcp_only.pcap";
-        //String apFileName = "exported2.pcap" ;
-
-        apPcapFile = AP_DUMP_PATH + "\\" + apFileName;
+//      If there is no directory for results then create it
+        if (!Files.exists(Paths.get(RESULTS_PATH)))
+            Files.createDirectory(Paths.get(RESULTS_PATH));
 
         // File names for result files
         resultFnames[0] = "time delta from previous captured frame (only packets from STA to AP) (STA side)";
@@ -160,6 +199,40 @@ public class Main implements ConstantsIface{
 
         for (short i = 0; i < NUMBER_OF_RESULT_FILES; i++){
             resultFiles[i]=RESULTS_PATH + "\\"+resultFnames[i]+".txt";
+
+        }
+
+        getPcapFileList(AP_DUMP_PATH,apFiles);
+        getPcapFileList(STA_DUMP_PATH,staFiles);
+
+//        String staFilename = "sta.pcap";
+
+
+//        String apFileName = "ap.pcap" ;
+        //String apFileName = "sta.pcap";
+        //String apFileName = "packet6754.pcap";
+        //String apFileName = "decrypted2.pcap" ;
+        //String apFileName = "tcp_only.pcap";
+        //String apFileName = "exported2.pcap" ;
+
+    }
+
+    public static void getPcapFileList(String filepath, ArrayList<File>fileList) {
+
+        File directory = new File(filepath);
+        // get just files, not directories
+        File[] files = directory.listFiles((FileFilter) FileFileFilter.FILE);
+
+        //sort by last modified (asc order)
+        Arrays.sort(files, LastModifiedFileComparator.LASTMODIFIED_COMPARATOR);
+//        System.out.println("\nLast Modified Ascending Order (LASTMODIFIED_COMPARATOR)");
+
+        //Add pcap files to array list
+        for (File f:files){
+            if (f.getName().endsWith(".pcap")){
+                fileList.add(f);
+//                System.out.println(f+" file added to list");
+            }
 
         }
     }
@@ -696,66 +769,65 @@ public class Main implements ConstantsIface{
 
         }
 
+        System.out.println(sessions.size() + " TCP sessions are opened at the moment ");
+        System.out.println(tcpCounter + " tcp packets have been found in " + apPcapFile);
+        System.out.println("All " + apPacketCounter + " packets have been read from AP file " + apPcapFile );
+
+        apPh.close();
+
+    }
+
+    //Write parameters of session to files
+    private static void analiseSession(TCPSession session) throws IOException {
+
+
         FileWriter durWriter = new FileWriter(resultFiles[7],APPEND_TO_FILE);
         FileWriter intervalWriter = new FileWriter(resultFiles[8],APPEND_TO_FILE);
         FileWriter pktLengthsWriter = new FileWriter(resultFiles[9],APPEND_TO_FILE);
 
-        for (TCPSession session:sessions){
+                //Packet Lengths
+                ArrayList<IpV4Packet>pkts = session.getIpV4Packets();
+                for (IpV4Packet pkt:pkts){
+//                    System.out.println("Packet length = "+pkt.getHeader().getTotalLengthAsInt());
+                    pktLengthsWriter.write(String.format("%d\n",pkt.getHeader().getTotalLengthAsInt()));
+                }
+                //Splitter between sessions
+                pktLengthsWriter.write("\n");
 
-            //Packet Lengths
-            ArrayList<IpV4Packet>pkts = session.getIpV4Packets();
-            for (IpV4Packet pkt:pkts){
-                System.out.println("Packet length = "+pkt.getHeader().getTotalLengthAsInt());
-                pktLengthsWriter.write(String.format("%d\n",pkt.getHeader().getTotalLengthAsInt()));
-            }
-            //Splitter between sessions
-            pktLengthsWriter.write("\n");
-
-            //Intervals
-            Timestamp prevPacketTmstmp = null;
-            ArrayList<Timestamp>tmstmps = session.getPacketTimestamps();
-            for(Timestamp tmstmp:tmstmps){
-                Double interval = getTimeDelta(tmstmp,prevPacketTmstmp);
-                prevPacketTmstmp=tmstmp;
-                System.out.println("interval " + String.format("%.9f",interval).replaceAll(",", "."));
-                intervalWriter.write(String.format("%f.9\n",interval).replaceAll(",","."));
-            }
-            //Splitter between sessions
-            intervalWriter.write("\n");
+                //Intervals
+                Timestamp prevPacketTmstmp = null;
+                ArrayList<Timestamp>tmstmps = session.getPacketTimestamps();
+                for(Timestamp tmstmp:tmstmps){
+                    Double interval = getTimeDelta(tmstmp,prevPacketTmstmp);
+                    prevPacketTmstmp=tmstmp;
+//                    System.out.println("interval " + String.format("%.9f",interval).replaceAll(",", "."));
+                    intervalWriter.write(String.format("%.9f\n",interval).replaceAll(",","."));
+                }
+                //Splitter between sessions
+                intervalWriter.write("\n");
 
 
 //            ArrayList<Long>packetNums=session.getPacketNums();
-            System.out.println("Amount of packets in session = " + pkts.size());
+//                System.out.println("Amount of packets in session = " + pkts.size());
 //            for (long i : packetNums){
 //                System.out.println("Packet "+i);
 //            }
 
-            //Session duration
-            double dur = session.getSessionDuration();
-            if (dur>0){
+                //Session duration
+                double dur = session.getSessionDuration();
+                if (dur>0){
 //                System.out.println(" Session duration in seconds: "+dur);
-                durWriter.write(String.format("%.9f\n",dur).replaceAll(",", "."));
-            }
-            else{
+                    durWriter.write(String.format("%.9f\n",dur).replaceAll(",", "."));
+                }
+                else{
 //                System.out.println("Could not find session duration");
-                //TODO Should i write anything if duration was not found?
-                durWriter.write("null\n");
-            }
+                    //TODO Should i write anything if duration was not found?
+                    durWriter.write("null\n");
+                }
 
-            System.out.println();
-
-        }
         durWriter.close();
         intervalWriter.close();
         pktLengthsWriter.close();
-
-        System.out.println(sessions.size() + " TCP sessions were found");
-
-        System.out.println();
-        System.out.println(tcpCounter + " tcp packets were found in " + apPcapFile);
-        System.out.println("All " + apPacketCounter + " packets were read from AP file " + apPcapFile );
-
-        apPh.close();
 
     }
 
@@ -877,7 +949,7 @@ public class Main implements ConstantsIface{
         double time_delta = 0;
 
         //If previous frame didn't have time delta
-        if (previousFrameTime != null) {
+        if (previousFrameTime != null && currFrameTime!= null) {
 
             int deltaInMs = (int) Math.abs(previousFrameTime.getTime() - currFrameTime.getTime());
             //If delta in seconds is > 0 then we should count seconds together with nano seconds
