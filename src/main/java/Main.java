@@ -723,6 +723,8 @@ public class Main implements ConstantsIface{
                                 // if ip packet contains tcp
                                 if (ipV4Packet!=null & ipV4Packet.getHeader().getProtocol().toString().equals("6 (TCP)")){
 
+
+                                    lastReadTimestamp=apPh.getTimestamp();
                                     tcpCounter++;
                                     TcpPacket tcpPacket=TcpPacket.newPacket(payload,tcpPos,payloadLength-tcpPos);
 

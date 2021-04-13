@@ -21,5 +21,7 @@ public interface ConstantsIface {
     //Sta2
     //04:92:26:34:4f:ff
     public static final String STA2_MAC = "049226344fff";
+    //Timeout value for sessions
+    public static final double TIMEOUT_VAL=3600*12.0;
 
 }

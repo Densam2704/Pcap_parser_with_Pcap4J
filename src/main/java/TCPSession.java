@@ -20,7 +20,11 @@ public class TCPSession {
 
         Timestamp lastTmstmpInSession = packetTimestamps.get(packetTimestamps.size()-1);
         //if  last packet in session was added into the session more than 12 hours ago
-        if (getTimeDelta(currPktTimestamp,lastTmstmpInSession)>3600*12){
+//        System.out.printf("currPktTimestamp = %s\n",currPktTimestamp.toString());
+//        System.out.printf("lastTmstmpInSession = %s\n",lastTmstmpInSession.toString());
+        Double difference = getTimeDelta(currPktTimestamp,lastTmstmpInSession);
+//        System.out.printf("Session lasts = %.6f\n",difference);
+        if (difference>ConstantsIface.TIMEOUT_VAL){
             return true;
         }
         return false;
