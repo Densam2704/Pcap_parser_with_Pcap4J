@@ -15,12 +15,12 @@ public class TCPSession {
     ArrayList<Timestamp>packetTimestamps = new ArrayList<Timestamp>();
     ArrayList <Long> packetNums = new ArrayList<>();
 
-    //Checks if last added packet in session is added more than 1 day ago
+    //Checks if last added packet in session is added more than 12 hours ago
     public boolean isSessionTooLong(Timestamp currPktTimestamp){
 
         Timestamp lastTmstmpInSession = packetTimestamps.get(packetTimestamps.size()-1);
-        //if  last packet in session was added into the session more than 1 day ago
-        if (getTimeDelta(currPktTimestamp,lastTmstmpInSession)>3600*24){
+        //if  last packet in session was added into the session more than 12 hours ago
+        if (getTimeDelta(currPktTimestamp,lastTmstmpInSession)>3600*12){
             return true;
         }
         return false;

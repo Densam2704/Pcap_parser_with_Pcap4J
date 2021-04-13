@@ -716,10 +716,12 @@ public class Main implements ConstantsIface{
                                 //Position of ip and tcp in Radiotap Payload
                                 int ipPos=40;
                                 int tcpPos=ipPos+20;
-                                IpV4Packet ipV4Packet=IpV4Packet.newPacket(payload,ipPos,payloadLength-ipPos);
+                                IpV4Packet ipV4Packet=null;
+                                if(payloadLength-ipPos>0)
+                                    ipV4Packet=IpV4Packet.newPacket(payload,ipPos,payloadLength-ipPos);
 
                                 // if ip packet contains tcp
-                                if (ipV4Packet.getHeader().getProtocol().toString().equals("6 (TCP)")){
+                                if (ipV4Packet!=null & ipV4Packet.getHeader().getProtocol().toString().equals("6 (TCP)")){
 
                                     tcpCounter++;
                                     TcpPacket tcpPacket=TcpPacket.newPacket(payload,tcpPos,payloadLength-tcpPos);
@@ -853,7 +855,8 @@ public class Main implements ConstantsIface{
     }
 
     //sample. TODO Delete it. When I finish the program
-    private static void readApPcap (String apPcapFile) throws NotOpenException, PcapNativeException, EOFException, TimeoutException {
+    private static void readApPcap (String apPcapFile) throws NotOpenException, PcapNativeException, EOFException,
+            TimeoutException {
         PcapHandle apPh = Pcaps.openOffline(apPcapFile, PcapHandle.TimestampPrecision.NANO);
 
 
