@@ -5,6 +5,7 @@ import org.pcap4j.core.*;
 import org.pcap4j.packet.*;
 import org.pcap4j.packet.namednumber.Dot11FrameType;
 import org.apache.commons.io.comparator.LastModifiedFileComparator;
+
 import java.io.*;
 import java.net.InetAddress;
 import java.nio.file.Files;
@@ -28,8 +29,6 @@ public class Main implements ConstantsIface{
 
 
         init();
-        System.out.println(apFiles.size() + " pcap files have been found in " + AP_DUMP_PATH);
-        System.out.println(staFiles.size() + " pcap files have been found in " + STA_DUMP_PATH);
 
         int num=0;
         for (File apFile:apFiles){
@@ -64,6 +63,8 @@ public class Main implements ConstantsIface{
             session=sessions.get(i);
                 analiseSession(session);
         }
+
+
 //        for (File staFile:staFiles){
 //            staPcapFile = STA_DUMP_PATH + "\\" + staFile.getName();
 //        }
@@ -196,6 +197,9 @@ public class Main implements ConstantsIface{
         resultFnames[7] = "tcp session duration";
         resultFnames[8] = "packet intervals in sessions";
         resultFnames[9] = "packet lengths in sessions";
+        resultFnames[10] = "discord "+ resultFnames[7];
+        resultFnames[11] = "discord "+ resultFnames[8];
+        resultFnames[12] = "discord "+ resultFnames[9];
 
         for (short i = 0; i < NUMBER_OF_RESULT_FILES; i++){
             resultFiles[i]=RESULTS_PATH + "\\"+resultFnames[i]+".txt";
@@ -205,8 +209,10 @@ public class Main implements ConstantsIface{
         getPcapFileList(AP_DUMP_PATH,apFiles);
         getPcapFileList(STA_DUMP_PATH,staFiles);
 
-//        String staFilename = "sta.pcap";
+        System.out.println(apFiles.size() + " pcap files have been found in " + AP_DUMP_PATH);
+        System.out.println(staFiles.size() + " pcap files have been found in " + STA_DUMP_PATH);
 
+//        String staFilename = "sta.pcap";
 
 //        String apFileName = "ap.pcap" ;
         //String apFileName = "sta.pcap";
@@ -319,7 +325,7 @@ public class Main implements ConstantsIface{
 
                     byte[]byteWlanSa = new byte [wlanAddrLen];
                     System.arraycopy(payload,wlanSaPos,byteWlanSa,0,wlanAddrLen);
-                    String wlanSa = byteArrayToHex(byteWlanSa);
+                    String wlanSa = byteArrToHexStr(byteWlanSa);
 //
                     if (wlanSa.equals(STA1_MAC)||wlanSa.equals(STA2_MAC)){
 //                        System.out.println("THIS IS OUR FRAME");
@@ -407,7 +413,7 @@ public class Main implements ConstantsIface{
 
                         System.out.println("Found TCP packet from STA to AP in file " + staPcapFile+
                                 "\nPacket number "+staPacketCounter);
-                        System.out.println("TCP checksum for verifying "+byteArrayToHex(checksumTCPBytes));
+                        System.out.println("TCP checksum for verifying "+ byteArrToHexStr(checksumTCPBytes));
                         System.out.println("Now checking this TCP paket in "+apPcapFile);
 
                         PcapHandle apPh= find_3_TCP_in_AP(apPcapFile,checksumTCPBytes,saMac,daMac);
@@ -497,7 +503,7 @@ public class Main implements ConstantsIface{
 
                         System.out.println("Found TCP packet from AP to STA in file " + staPcapFile+
                                 "\nPacket number "+staPacketCounter);
-                        System.out.println("TCP checksum for verifying "+byteArrayToHex(checksumTCPBytes));
+                        System.out.println("TCP checksum for verifying "+ byteArrToHexStr(checksumTCPBytes));
                         System.out.println("Now checking this TCP paket in "+apPcapFile);
 
                         PcapHandle apPh= find_3_TCP_in_AP(apPcapFile,checksumTCPBytes,apMac,staMac);
@@ -614,11 +620,11 @@ public class Main implements ConstantsIface{
 
                             byte[]byteWlanSa = new byte [wlanAddrLen];
                             System.arraycopy(payload,wlanSaPos,byteWlanSa,0,wlanAddrLen);
-                            String wlanSa = byteArrayToHex(byteWlanSa);
+                            String wlanSa = byteArrToHexStr(byteWlanSa);
 
                             byte[]byteWlanDa = new byte [wlanAddrLen];
                             System.arraycopy(payload,wlanDaPos,byteWlanDa,0,wlanAddrLen);
-                            String wlanDa = byteArrayToHex(byteWlanDa);
+                            String wlanDa = byteArrToHexStr(byteWlanDa);
 
                             //If SA and DA in both AP and STA are equal and
                             //If checksums in both AP and STA packets are equal
@@ -695,11 +701,11 @@ public class Main implements ConstantsIface{
 
                             byte[]byteWlanSa = new byte [wlanAddrLen];
                             System.arraycopy(payload,wlanSaPos,byteWlanSa,0,wlanAddrLen);
-                            String wlanSa = byteArrayToHex(byteWlanSa);
+                            String wlanSa = byteArrToHexStr(byteWlanSa);
 
                             byte[]byteWlanDa = new byte [wlanAddrLen];
                             System.arraycopy(payload,wlanDaPos,byteWlanDa,0,wlanAddrLen);
-                            String wlanDa = byteArrayToHex(byteWlanDa);
+                            String wlanDa = byteArrToHexStr(byteWlanDa);
 
                             //If SA and DA in both AP and STA are equal and
                             //If checksums in both AP and STA packets are equal
@@ -789,45 +795,90 @@ public class Main implements ConstantsIface{
         FileWriter intervalWriter = new FileWriter(resultFiles[8],APPEND_TO_FILE);
         FileWriter pktLengthsWriter = new FileWriter(resultFiles[9],APPEND_TO_FILE);
 
-                //Packet Lengths
-                ArrayList<IpV4Packet>pkts = session.getIpV4Packets();
-                for (IpV4Packet pkt:pkts){
+        boolean isDiscordSesion = session.isDiscord();
+
+        if(isDiscordSesion){
+
+            FileWriter dsDurWriter = new FileWriter(resultFiles[10],APPEND_TO_FILE);
+            FileWriter dsIntervalWriter = new FileWriter(resultFiles[11],APPEND_TO_FILE);
+            FileWriter dsPktLengthsWriter = new FileWriter(resultFiles[12],APPEND_TO_FILE);
+
+            //Packet Lengths
+            ArrayList<IpV4Packet>pkts = session.getIpV4Packets();
+            for (IpV4Packet pkt:pkts){
+                dsPktLengthsWriter.write(String.format("%d\n",pkt.getHeader().getTotalLengthAsInt()));
+                pktLengthsWriter.write(String.format("%d\n",pkt.getHeader().getTotalLengthAsInt()));
+            }
+            //Splitter between sessions
+            dsPktLengthsWriter.write("\n");
+            pktLengthsWriter.write("\n");
+
+            //Intervals
+            Timestamp prevPacketTmstmp = null;
+            ArrayList<Timestamp>tmstmps = session.getPacketTimestamps();
+            for(Timestamp tmstmp:tmstmps){
+                Double interval = getTimeDelta(tmstmp,prevPacketTmstmp);
+                prevPacketTmstmp=tmstmp;
+                intervalWriter.write(String.format("%.9f\n",interval).replaceAll(",","."));
+                dsIntervalWriter.write(String.format("%.9f\n",interval).replaceAll(",","."));
+            }
+            //Splitter between sessions
+            intervalWriter.write("\n");
+            dsIntervalWriter.write("\n");
+
+            //Session duration
+            double dur = session.getSessionDuration();
+            if (dur>0){
+                durWriter.write(String.format("%.9f\n",dur).replaceAll(",", "."));
+                dsDurWriter.write(String.format("%.9f\n",dur).replaceAll(",", "."));
+            }
+            else{
+                //TODO Should i write anything if duration was not found?
+                durWriter.write("null\n");
+                dsDurWriter.write("null\n");
+            }
+
+            dsDurWriter.close();
+            dsIntervalWriter.close();
+            dsPktLengthsWriter.close();
+        }
+        //If not discord session
+        else{
+            //Packet Lengths
+            ArrayList<IpV4Packet>pkts = session.getIpV4Packets();
+            for (IpV4Packet pkt:pkts){
 //                    System.out.println("Packet length = "+pkt.getHeader().getTotalLengthAsInt());
-                    pktLengthsWriter.write(String.format("%d\n",pkt.getHeader().getTotalLengthAsInt()));
-                }
-                //Splitter between sessions
-                pktLengthsWriter.write("\n");
+                pktLengthsWriter.write(String.format("%d\n",pkt.getHeader().getTotalLengthAsInt()));
+            }
+            //Splitter between sessions
+            pktLengthsWriter.write("\n");
 
-                //Intervals
-                Timestamp prevPacketTmstmp = null;
-                ArrayList<Timestamp>tmstmps = session.getPacketTimestamps();
-                for(Timestamp tmstmp:tmstmps){
-                    Double interval = getTimeDelta(tmstmp,prevPacketTmstmp);
-                    prevPacketTmstmp=tmstmp;
+            //Intervals
+            Timestamp prevPacketTmstmp = null;
+            ArrayList<Timestamp>tmstmps = session.getPacketTimestamps();
+            for(Timestamp tmstmp:tmstmps){
+                Double interval = getTimeDelta(tmstmp,prevPacketTmstmp);
+                prevPacketTmstmp=tmstmp;
 //                    System.out.println("interval " + String.format("%.9f",interval).replaceAll(",", "."));
-                    intervalWriter.write(String.format("%.9f\n",interval).replaceAll(",","."));
-                }
-                //Splitter between sessions
-                intervalWriter.write("\n");
+                intervalWriter.write(String.format("%.9f\n",interval).replaceAll(",","."));
+            }
+            //Splitter between sessions
+            intervalWriter.write("\n");
 
-
-//            ArrayList<Long>packetNums=session.getPacketNums();
-//                System.out.println("Amount of packets in session = " + pkts.size());
-//            for (long i : packetNums){
-//                System.out.println("Packet "+i);
-//            }
-
-                //Session duration
-                double dur = session.getSessionDuration();
-                if (dur>0){
+            //Session duration
+            double dur = session.getSessionDuration();
+            if (dur>0){
 //                System.out.println(" Session duration in seconds: "+dur);
-                    durWriter.write(String.format("%.9f\n",dur).replaceAll(",", "."));
-                }
-                else{
+                durWriter.write(String.format("%.9f\n",dur).replaceAll(",", "."));
+            }
+            else{
 //                System.out.println("Could not find session duration");
-                    //TODO Should i write anything if duration was not found?
-                    durWriter.write("null\n");
-                }
+                //TODO Should i write anything if duration was not found?
+                durWriter.write("null\n");
+            }
+
+        }
+
 
         durWriter.close();
         intervalWriter.close();
@@ -903,12 +954,12 @@ public class Main implements ConstantsIface{
 
                             byte[]wlanDA = new byte [wlanAddrLen];
                             System.arraycopy(payload,16,wlanDA,0,wlanAddrLen);
-                            System.out.println("wlan destination address: " + byteArrayToHex(wlanDA));
+                            System.out.println("wlan destination address: " + byteArrToHexStr(wlanDA));
 
                             byte[]wlanSA = new byte [wlanAddrLen];
                             System.arraycopy(payload,10,wlanSA,0,wlanAddrLen);
-                            System.out.println("wlan source address: " + byteArrayToHex(wlanSA));
-                            System.out.println("payload: "+ byteArrayToHex(payload));
+                            System.out.println("wlan source address: " + byteArrToHexStr(wlanSA));
+                            System.out.println("payload: "+ byteArrToHexStr(payload));
                             //System.out.println("Payload [49]" +byteArrayToHex(Arrays.copyOfRange(payload,49,payload.length)));
 
 
@@ -918,7 +969,7 @@ public class Main implements ConstantsIface{
                                 //System.out.println("Packet "+packetNumber);
                                 tcpPacketsNum++;
                                 System.arraycopy(payload,76,checksumTCP,0,2);
-                                System.out.println("TCP Checksum " + byteArrayToHex(checksumTCP));
+                                System.out.println("TCP Checksum " + byteArrToHexStr(checksumTCP));
                             }
 
                             break;
@@ -942,7 +993,7 @@ public class Main implements ConstantsIface{
 
     //Convert byte array to string
     //https://stackoverflow.com/questions/9655181/how-to-convert-a-byte-array-to-a-hex-string-in-java
-    public static String byteArrayToHex(byte[] a) {
+    public static String byteArrToHexStr(byte[] a) {
         StringBuilder sb = new StringBuilder(a.length * 2);
         for(byte b: a)
             sb.append(String.format("%02x", b));

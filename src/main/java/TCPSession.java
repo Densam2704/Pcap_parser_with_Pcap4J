@@ -2,11 +2,14 @@ import org.pcap4j.packet.IllegalRawDataException;
 import org.pcap4j.packet.IpV4Packet;
 import org.pcap4j.packet.Packet;
 import org.pcap4j.packet.TcpPacket;
+import sun.net.util.IPAddressUtil;
 
+import java.net.Inet4Address;
+import java.net.UnknownHostException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 
-public class TCPSession {
+public class TCPSession implements ConstantsIface{
     private String ip1;
     private String port1;
     private String ip2;
@@ -14,6 +17,34 @@ public class TCPSession {
     ArrayList<IpV4Packet>ipV4Packets = new ArrayList<IpV4Packet>();
     ArrayList<Timestamp>packetTimestamps = new ArrayList<Timestamp>();
     ArrayList <Long> packetNums = new ArrayList<>();
+
+    private int ipToHex(String ip){
+        Inet4Address inet4Address = null;
+        try {
+            inet4Address = (Inet4Address)Inet4Address.getByName(ip);
+
+            byte[] bytes = inet4Address.getAddress();
+
+            int hex = ((bytes[0] & 0xFF) << 24) |
+                    ((bytes[1] & 0xFF) << 16) |
+                    ((bytes[2] & 0xFF) << 8)  |
+                    ((bytes[3] & 0xFF) << 0);
+            return hex;
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
+    public boolean isDiscord(){
+
+        if ((DISCORD_HEX_SUBNET & DISCORD_MASK) == (ipToHex(ip1) & DISCORD_MASK)){
+            return true;
+        }
+        if ((DISCORD_HEX_SUBNET & DISCORD_MASK) == (ipToHex(ip2) & DISCORD_MASK)){
+            return true;
+        }
+        return false;
+    }
 
     //Checks if last added packet in session is added more than 12 hours ago
     public boolean isSessionTooLong(Timestamp currPktTimestamp){
@@ -24,7 +55,7 @@ public class TCPSession {
 //        System.out.printf("lastTmstmpInSession = %s\n",lastTmstmpInSession.toString());
         Double difference = getTimeDelta(currPktTimestamp,lastTmstmpInSession);
 //        System.out.printf("Session lasts = %.6f\n",difference);
-        if (difference>ConstantsIface.TIMEOUT_VAL){
+        if (difference>TIMEOUT_VAL){
             return true;
         }
         return false;

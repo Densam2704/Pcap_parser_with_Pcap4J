@@ -1,5 +1,5 @@
 public interface ConstantsIface {
-    public static final int NUMBER_OF_RESULT_FILES = 10;
+    public static final int NUMBER_OF_RESULT_FILES = 15;
     public static final String STATION = "sta";
     public static final String ACCESS_POINT = "ap";
 
@@ -24,4 +24,10 @@ public interface ConstantsIface {
     //Timeout value for sessions
     public static final double TIMEOUT_VAL=3600*12.0;
 
+    //Discord IPs 162.158.0.0 - 162.159.255.255 (162.158.0.0/15)
+    public static final String DISCORD_SUBNET="162.158.0.0";
+    public static final int DISCORD_BITMASK=15;
+    //162.158.0.0
+    public static final int DISCORD_HEX_SUBNET=0xa29e0000;
+    public static final int DISCORD_MASK=-1<<(32-DISCORD_BITMASK);
 }
