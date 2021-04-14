@@ -39,23 +39,31 @@ public class Main implements ConstantsIface{
             int sessionSize = sessions.size();
             TCPSession session;
             ArrayList<TCPSession>finishedSessions= new ArrayList<>();
+
             //Look for finished sessions and write them to file
             for (int i = 0 ; i < sessionSize; i++){
                 session=sessions.get(i);
                 boolean finished = session.checkIsFinished();
-                boolean tooLong = session.isSessionTooLong(lastReadTimestamp);
+                boolean tooLong = session.checkIsTooLong(lastReadTimestamp);
+                boolean discordSession = session.checkIsDiscord();
                 //If the session was finished or if the last added packet was added too long ago
                 if (finished||tooLong){
                     analiseSession(session);
+                    if(discordSession){
+                        analiseDiscordSession(session);
+                    }
                     finishedSessions.add(session);
                     //For testing
+                    //if session timed out
                     if(tooLong & !finished){
-                        System.out.printf("Session %s:%s %s:%s were finished because of timeout\n",
-                                session.getIp1(),session.getPort1(),session.getIp2(),session.getPort2());
-                        System.out.println("Amount of packets in the session: "+session.getIpV4Packets().size());
+//                        System.out.printf("Session %s:%s %s:%s were finished because of timeout\n",
+//                                session.getIp1(),session.getPort1(),session.getIp2(),session.getPort2());
+//                        System.out.println("Amount of packets in the session: "+session.getIpV4Packets().size());
                         FileWriter timedOutWriter = new FileWriter(resultFiles[13],APPEND_TO_FILE);
                         timedOutWriter.write(String.format("Session %s:%s %s:%s were finished because of timeout\n",
                                 session.getIp1(),session.getPort1(),session.getIp2(),session.getPort2()));
+                        timedOutWriter.write(String.format("Amount of packets in the session: %d\n",
+                                session.getIpV4Packets().size()));
                         timedOutWriter.close();
                     }
                     APPEND_TO_FILE=true;
@@ -756,9 +764,9 @@ public class Main implements ConstantsIface{
                                     TcpPacket tcpPacket=TcpPacket.newPacket(payload,tcpPos,payloadLength-tcpPos);
 
                                     String ip1 = ipV4Packet.getHeader().getSrcAddr().getHostAddress();
-                                    String port1 = tcpPacket.getHeader().getSrcPort().toString();
+                                    String port1 = String.valueOf(tcpPacket.getHeader().getSrcPort().valueAsInt());
                                     String ip2 = ipV4Packet.getHeader().getDstAddr().getHostAddress();
-                                    String port2 = tcpPacket.getHeader().getDstPort().toString();
+                                    String port2 = String.valueOf(tcpPacket.getHeader().getDstPort().valueAsInt());
 
                                     //Add to sessions arraylist.
 
@@ -808,6 +816,54 @@ public class Main implements ConstantsIface{
 
     }
 
+    //TODO analiseDiscordSession
+    //TODO analiseTelegramSession
+    //TODO analiseSkypeSession
+    //TODO analiseYoutubeSession
+    private static void analiseDiscordSession(TCPSession session) throws IOException {
+        FileWriter dsDurWriter = new FileWriter(resultFiles[10],APPEND_TO_FILE);
+        FileWriter dsIntervalWriter = new FileWriter(resultFiles[11],APPEND_TO_FILE);
+        FileWriter dsPktLengthsWriter = new FileWriter(resultFiles[12],APPEND_TO_FILE);
+
+        //Packet Lengths
+        ArrayList<IpV4Packet>pkts = session.getIpV4Packets();
+        for (IpV4Packet pkt:pkts){
+            dsPktLengthsWriter.write(String.format("%d\n",pkt.getHeader().getTotalLengthAsInt()));
+        }
+        //Splitter between sessions
+        dsPktLengthsWriter.write("\n");
+
+        //Intervals
+        Timestamp prevPacketTmstmp = null;
+        ArrayList<Timestamp>tmstmps = session.getPacketTimestamps();
+        for(Timestamp tmstmp:tmstmps){
+            Double interval = getTimeDelta(tmstmp,prevPacketTmstmp);
+            prevPacketTmstmp=tmstmp;
+            dsIntervalWriter.write(String.format("%.9f\n",interval).replaceAll(",","."));
+        }
+        //Splitter between sessions
+        dsIntervalWriter.write("\n");
+
+        //Session duration
+        double dur = session.getSessionDuration();
+        if (dur>0){
+            dsDurWriter.write(String.format("%.9f\n",dur).replaceAll(",", "."));
+        }
+        else{
+            //TODO Should i write anything if duration was not found?
+            dsDurWriter.write(String.format("%.9f\n",0.0).replaceAll(",", "."));
+
+            //For testing
+//                System.out.printf("File:%s\n discord session %s:%s %s:%s has bad duration %f\n",apPcapFile,session.getIp1(),
+//                        session.getPort1(),session.getIp2(),session.getPort2(),dur);
+//                System.out.printf("Session start time: %s\nSession end time: %s\n",
+//                        session.getStartTime().toString(),session.getEndTime());
+        }
+
+        dsDurWriter.close();
+        dsIntervalWriter.close();
+        dsPktLengthsWriter.close();
+    }
     //Write parameters of session to files
     private static void analiseSession(TCPSession session) throws IOException {
 
@@ -816,101 +872,44 @@ public class Main implements ConstantsIface{
         FileWriter intervalWriter = new FileWriter(resultFiles[8],APPEND_TO_FILE);
         FileWriter pktLengthsWriter = new FileWriter(resultFiles[9],APPEND_TO_FILE);
 
-        boolean isDiscordSession = session.checkIsDiscord();
 
-        if(isDiscordSession){
-
-            FileWriter dsDurWriter = new FileWriter(resultFiles[10],APPEND_TO_FILE);
-            FileWriter dsIntervalWriter = new FileWriter(resultFiles[11],APPEND_TO_FILE);
-            FileWriter dsPktLengthsWriter = new FileWriter(resultFiles[12],APPEND_TO_FILE);
-
-            //Packet Lengths
-            ArrayList<IpV4Packet>pkts = session.getIpV4Packets();
-            for (IpV4Packet pkt:pkts){
-                dsPktLengthsWriter.write(String.format("%d\n",pkt.getHeader().getTotalLengthAsInt()));
-                pktLengthsWriter.write(String.format("%d\n",pkt.getHeader().getTotalLengthAsInt()));
-            }
-            //Splitter between sessions
-            dsPktLengthsWriter.write("\n");
-            pktLengthsWriter.write("\n");
-
-            //Intervals
-            Timestamp prevPacketTmstmp = null;
-            ArrayList<Timestamp>tmstmps = session.getPacketTimestamps();
-            for(Timestamp tmstmp:tmstmps){
-                Double interval = getTimeDelta(tmstmp,prevPacketTmstmp);
-                prevPacketTmstmp=tmstmp;
-                intervalWriter.write(String.format("%.9f\n",interval).replaceAll(",","."));
-                dsIntervalWriter.write(String.format("%.9f\n",interval).replaceAll(",","."));
-            }
-            //Splitter between sessions
-            intervalWriter.write("\n");
-            dsIntervalWriter.write("\n");
-
-            //Session duration
-            double dur = session.getSessionDuration();
-            if (dur>0){
-                durWriter.write(String.format("%.9f\n",dur).replaceAll(",", "."));
-                dsDurWriter.write(String.format("%.9f\n",dur).replaceAll(",", "."));
-            }
-            else{
-                //TODO Should i write anything if duration was not found?
-                durWriter.write(String.format("%.9f\n",0.0).replaceAll(",", "."));
-                dsDurWriter.write(String.format("%.9f\n",0.0).replaceAll(",", "."));
-
-                //For testing
-//                System.out.printf("File:%s\n discord session %s:%s %s:%s has bad duration %f\n",apPcapFile,session.getIp1(),
-//                        session.getPort1(),session.getIp2(),session.getPort2(),dur);
-//                System.out.printf("Session start time: %s\nSession end time: %s\n",
-//                        session.getStartTime().toString(),session.getEndTime());
-            }
-
-            dsDurWriter.close();
-            dsIntervalWriter.close();
-            dsPktLengthsWriter.close();
-        }
-        //If not discord session
-        else{
-            //Packet Lengths
-            ArrayList<IpV4Packet>pkts = session.getIpV4Packets();
-            for (IpV4Packet pkt:pkts){
+        //Packet Lengths
+        ArrayList<IpV4Packet>pkts = session.getIpV4Packets();
+        for (IpV4Packet pkt:pkts){
 //                    System.out.println("Packet length = "+pkt.getHeader().getTotalLengthAsInt());
-                pktLengthsWriter.write(String.format("%d\n",pkt.getHeader().getTotalLengthAsInt()));
-            }
-            //Splitter between sessions
-            pktLengthsWriter.write("\n");
+            pktLengthsWriter.write(String.format("%d\n",pkt.getHeader().getTotalLengthAsInt()));
+        }
+        //Splitter between sessions
+        pktLengthsWriter.write("\n");
 
-            //Intervals
-            Timestamp prevPacketTmstmp = null;
-            ArrayList<Timestamp>tmstmps = session.getPacketTimestamps();
-            for(Timestamp tmstmp:tmstmps){
-                Double interval = getTimeDelta(tmstmp,prevPacketTmstmp);
-                prevPacketTmstmp=tmstmp;
+        //Intervals
+        Timestamp prevPacketTmstmp = null;
+        ArrayList<Timestamp>tmstmps = session.getPacketTimestamps();
+        for(Timestamp tmstmp:tmstmps){
+            Double interval = getTimeDelta(tmstmp,prevPacketTmstmp);
+            prevPacketTmstmp=tmstmp;
 //                    System.out.println("interval " + String.format("%.9f",interval).replaceAll(",", "."));
-                intervalWriter.write(String.format("%.9f\n",interval).replaceAll(",","."));
-            }
-            //Splitter between sessions
-            intervalWriter.write("\n");
+            intervalWriter.write(String.format("%.9f\n",interval).replaceAll(",","."));
+        }
+        //Splitter between sessions
+        intervalWriter.write("\n");
 
-            //Session duration
-            double dur = session.getSessionDuration();
-            if (dur>0){
+        //Session duration
+        double dur = session.getSessionDuration();
+        if (dur>0){
 //                System.out.println(" Session duration in seconds: "+dur);
-                durWriter.write(String.format("%.9f\n",dur).replaceAll(",", "."));
-            }
-            else{
+            durWriter.write(String.format("%.9f\n",dur).replaceAll(",", "."));
+        }
+        else{
 //                System.out.println("Could not find session duration");
-                //TODO Should i write anything if duration was bad?
-                durWriter.write(String.format("%.9f\n",0.0).replaceAll(",", "."));
-                //For testing
+            //TODO Should i write anything if duration was bad?
+            durWriter.write(String.format("%.9f\n",0.0).replaceAll(",", "."));
+            //For testing
 //                System.out.printf("File:%s\n tcp session %s:%s %s:%s has bad duration %f\n",apPcapFile,session.getIp1(),
 //                        session.getPort1(),session.getIp2(),session.getPort2(),dur);
 //                System.out.printf("Session start time: %s\nSession end time: %s\n",
 //                        session.getStartTime().toString(),session.getEndTime());
-            }
-
         }
-
 
         durWriter.close();
         intervalWriter.close();

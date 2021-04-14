@@ -15,6 +15,35 @@ public class TCPSession implements ConstantsIface{
     ArrayList<IpV4Packet>ipV4Packets = new ArrayList<IpV4Packet>();
     ArrayList<Timestamp>packetTimestamps = new ArrayList<Timestamp>();
     ArrayList <Long> packetNums = new ArrayList<>();
+    private double timeout = -1;
+
+
+
+    public void setTimeout(){
+        timeout=TIMEOUT_LONG;
+        //if ip1 in our testbed then check ip2:port2
+        if ((ipToHex(ip1)&TESTBED_MASK) == (TESTBED_HEX_SUBNET&TESTBED_MASK)){
+
+            int intPort2 = Integer.parseInt(port2);
+            // if it's common port
+            if (intPort2 > 0 && intPort2 < 1024){
+                timeout=TIMEOUT_SHORT;
+            }
+        }
+        else{
+            //if ip2 in our testbed then check ip1:port
+            if((ipToHex(ip2)&TESTBED_MASK) == (TESTBED_HEX_SUBNET&TESTBED_MASK)){
+
+                int intPort1 = Integer.parseInt(port1);
+                // if it's common port
+                if (intPort1 > 0 && intPort1 < 1024){
+                    timeout=TIMEOUT_SHORT;
+                }
+            }
+        }
+
+
+    }
 
     public int ipToHex(String ip){
         Inet4Address inet4Address = null;
@@ -33,6 +62,19 @@ public class TCPSession implements ConstantsIface{
         }
         return 0;
     }
+
+    public boolean checkIsTelegram(){
+
+        if ((TELEGRAM_HEX_SUBNET & TELEGRAM_MASK) == (ipToHex(ip1) & TELEGRAM_MASK)){
+            return true;
+
+        }
+        if ((TELEGRAM_HEX_SUBNET & TELEGRAM_MASK) == (ipToHex(ip2) & TELEGRAM_MASK)){
+            return true;
+        }
+        return false;
+    }
+
     public boolean checkIsDiscord(){
 
         if ((DISCORD_HEX_SUBNET & DISCORD_MASK) == (ipToHex(ip1) & DISCORD_MASK)){
@@ -45,7 +87,7 @@ public class TCPSession implements ConstantsIface{
     }
 
     //Checks if last added packet in session is added more than 12 hours ago
-    public boolean isSessionTooLong(Timestamp currPktTimestamp){
+    public boolean checkIsTooLong(Timestamp currPktTimestamp){
 
         Timestamp lastTmstmpInSession = packetTimestamps.get(packetTimestamps.size()-1);
         //if  last packet in session was added into the session more than 12 hours ago
@@ -53,13 +95,21 @@ public class TCPSession implements ConstantsIface{
 //        System.out.printf("lastTmstmpInSession = %s\n",lastTmstmpInSession.toString());
         Double difference = getTimeDelta(currPktTimestamp,lastTmstmpInSession);
 //        System.out.printf("Session lasts = %.6f\n",difference);
-        if (difference>TIMEOUT_VAL){
+        if(timeout<0)
+            setTimeout();
+        //for testing
+//        System.out.printf("Session %s:%s %s:%s are checked\n",
+//                ip1,port1,ip2,port2);
+//        System.out.println("Amount of packets in the session: "+packetTimestamps.size());
+//        System.out.println("TIMEOUT VALUE: "+timeout);
+
+        if (difference>timeout){
             return true;
         }
         return false;
     }
 
-    //Look for FYN tcp. Returns true if FYN is found.
+    //Look for FIN tcp. Returns true if FIN is found.
     public boolean checkIsFinished(){
         int len = ipV4Packets.size();
         //If we don't find FIN in 10 last packets then there is likely no FIN
@@ -210,6 +260,10 @@ public class TCPSession implements ConstantsIface{
     }
 
     //Getters and Setters
+
+    public double getTimeout(){
+        return timeout;
+    }
 
     public String getIp1() {
         return ip1;

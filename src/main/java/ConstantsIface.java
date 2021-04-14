@@ -20,10 +20,19 @@ public interface ConstantsIface {
     //04:92:26:34:4f:ff
     public static final String STA2_MAC = "049226344fff";
     //Timeout value for sessions in seconds
-    public static final double TIMEOUT_VAL=60;
-    public static final double TIMEOUT_SPECIFIC_VAL=3600*12.0;
+    //1 minute
+    public static final double TIMEOUT_SHORT=60;
+    //24 hours
+    public static final double TIMEOUT_LONG=86400;
 
-    //Discord IPs 162.158.0.0 - 162.159.255.255 (162.158.0.0/15)
+//Telegram IPs 149.154.164.0 - 149.154.167.255 (149.154.164.0/22)
+    public static final String TELEGRAM_SUBNET="149.154.164.0";
+    public static final int TELEGRAM_BITMASK=22;
+    //162.158.0.0
+    public static final int TELEGRAM_HEX_SUBNET=0xa29e0000;
+    public static final int TELEGRAM_MASK=-1<<(32-TELEGRAM_BITMASK);
+
+//Discord IPs 162.158.0.0 - 162.159.255.255 (162.158.0.0/15)
     public static final String DISCORD_SUBNET="162.158.0.0";
     public static final int DISCORD_BITMASK=15;
     //162.158.0.0
