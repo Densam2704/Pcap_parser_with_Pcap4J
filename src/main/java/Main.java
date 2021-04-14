@@ -723,8 +723,13 @@ public class Main implements ConstantsIface{
                                 int ipPos=40;
                                 int tcpPos=ipPos+20;
                                 IpV4Packet ipV4Packet=null;
-                                if(payloadLength-ipPos>0)
+                                try{
                                     ipV4Packet=IpV4Packet.newPacket(payload,ipPos,payloadLength-ipPos);
+                                }
+                                catch (Exception e){
+//                                    System.out.println(e.getMessage());
+                                }
+
 
                                 // if ip packet contains tcp
                                 if (ipV4Packet!=null & ipV4Packet.getHeader().getProtocol().toString().equals("6 (TCP)")){
@@ -795,9 +800,9 @@ public class Main implements ConstantsIface{
         FileWriter intervalWriter = new FileWriter(resultFiles[8],APPEND_TO_FILE);
         FileWriter pktLengthsWriter = new FileWriter(resultFiles[9],APPEND_TO_FILE);
 
-        boolean isDiscordSesion = session.isDiscord();
+        boolean isDiscordSession = session.checkIsDiscord();
 
-        if(isDiscordSesion){
+        if(isDiscordSession){
 
             FileWriter dsDurWriter = new FileWriter(resultFiles[10],APPEND_TO_FILE);
             FileWriter dsIntervalWriter = new FileWriter(resultFiles[11],APPEND_TO_FILE);
@@ -834,8 +839,14 @@ public class Main implements ConstantsIface{
             }
             else{
                 //TODO Should i write anything if duration was not found?
-                durWriter.write("null\n");
-                dsDurWriter.write("null\n");
+                durWriter.write(String.format("%.9f\n",0.0).replaceAll(",", "."));
+                dsDurWriter.write(String.format("%.9f\n",0.0).replaceAll(",", "."));
+
+                //For testing
+//                System.out.printf("File:%s\n discord session %s:%s %s:%s has bad duration %f\n",apPcapFile,session.getIp1(),
+//                        session.getPort1(),session.getIp2(),session.getPort2(),dur);
+//                System.out.printf("Session start time: %s\nSession end time: %s\n",
+//                        session.getStartTime().toString(),session.getEndTime());
             }
 
             dsDurWriter.close();
@@ -873,8 +884,13 @@ public class Main implements ConstantsIface{
             }
             else{
 //                System.out.println("Could not find session duration");
-                //TODO Should i write anything if duration was not found?
-                durWriter.write("null\n");
+                //TODO Should i write anything if duration was bad?
+                durWriter.write(String.format("%.9f\n",0.0).replaceAll(",", "."));
+                //For testing
+//                System.out.printf("File:%s\n tcp session %s:%s %s:%s has bad duration %f\n",apPcapFile,session.getIp1(),
+//                        session.getPort1(),session.getIp2(),session.getPort2(),dur);
+//                System.out.printf("Session start time: %s\nSession end time: %s\n",
+//                        session.getStartTime().toString(),session.getEndTime());
             }
 
         }

@@ -1,8 +1,6 @@
 import org.pcap4j.packet.IllegalRawDataException;
 import org.pcap4j.packet.IpV4Packet;
-import org.pcap4j.packet.Packet;
 import org.pcap4j.packet.TcpPacket;
-import sun.net.util.IPAddressUtil;
 
 import java.net.Inet4Address;
 import java.net.UnknownHostException;
@@ -35,7 +33,7 @@ public class TCPSession implements ConstantsIface{
         }
         return 0;
     }
-    public boolean isDiscord(){
+    public boolean checkIsDiscord(){
 
         if ((DISCORD_HEX_SUBNET & DISCORD_MASK) == (ipToHex(ip1) & DISCORD_MASK)){
             return true;
@@ -109,8 +107,8 @@ public class TCPSession implements ConstantsIface{
     public double getSessionDuration(){
         double dur=0;
 
-        Timestamp start = this.getSessionStartTime();
-        Timestamp end = this.getSessionEndTime();
+        Timestamp start = this.getStartTime();
+        Timestamp end = this.getEndTime();
 
         if ( start!= null && end!=null){
             dur=getTimeDelta(start,end);
@@ -119,7 +117,7 @@ public class TCPSession implements ConstantsIface{
     }
 
     //get timestamp of start (TCP handshake)
-    public Timestamp getSessionStartTime() {
+    public Timestamp getStartTime() {
         //if there is no handshake, then we will take timestamp of the first packet
         Timestamp timestamp=packetTimestamps.get(0);
 
@@ -161,7 +159,7 @@ public class TCPSession implements ConstantsIface{
     }
 
     //get timestamp of end (TCP FIN)
-    public Timestamp getSessionEndTime(){
+    public Timestamp getEndTime(){
         //If there is no FIN, we will take time of the last packet
         Timestamp timestamp=packetTimestamps.get(packetTimestamps.size()-1);
         int len = ipV4Packets.size();
