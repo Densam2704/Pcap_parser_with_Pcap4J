@@ -10,8 +10,6 @@ public interface ConstantsIface {
     public static final String resultFnames[] = new String[NUMBER_OF_RESULT_FILES];
     public static final String resultFiles[] = new String[NUMBER_OF_RESULT_FILES];
 
-
-    public static final String STA1_IPv4 = "192.0.2.12";
     //AP MAC
     //00:c0:ca:98:df:df
     public static final String AP_MAC = "00c0ca98dfdf";
@@ -22,7 +20,8 @@ public interface ConstantsIface {
     //04:92:26:34:4f:ff
     public static final String STA2_MAC = "049226344fff";
     //Timeout value for sessions in seconds
-    public static final double TIMEOUT_VAL=3600*12.0;
+    public static final double TIMEOUT_VAL=60;
+    public static final double TIMEOUT_SPECIFIC_VAL=3600*12.0;
 
     //Discord IPs 162.158.0.0 - 162.159.255.255 (162.158.0.0/15)
     public static final String DISCORD_SUBNET="162.158.0.0";
@@ -30,4 +29,14 @@ public interface ConstantsIface {
     //162.158.0.0
     public static final int DISCORD_HEX_SUBNET=0xa29e0000;
     public static final int DISCORD_MASK=-1<<(32-DISCORD_BITMASK);
+
+// Testbed IPs 192.0.2.0/24
+    public static final String TESTBED_SUBNET = "192.0.2.0";
+    public static final int TESTBED_BITMASK=24;
+    public static final int TESTBED_HEX_SUBNET=0xc0000200;
+    public static final int TESTBED_MASK=0xFFFFFF00;
+
+    public static final String STA1_IPv4 = "192.0.2.12";
+    public static final String STA2_IPv4 = "192.0.2.15";
+
 }

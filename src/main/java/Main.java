@@ -42,13 +42,26 @@ public class Main implements ConstantsIface{
             //Look for finished sessions and write them to file
             for (int i = 0 ; i < sessionSize; i++){
                 session=sessions.get(i);
+                boolean finished = session.checkIsFinished();
+                boolean tooLong = session.isSessionTooLong(lastReadTimestamp);
                 //If the session was finished or if the last added packet was added too long ago
-                if (session.checkIsFinished()||session.isSessionTooLong(lastReadTimestamp)){
+                if (finished||tooLong){
                     analiseSession(session);
-                    APPEND_TO_FILE=true;
                     finishedSessions.add(session);
+                    //For testing
+                    if(tooLong & !finished){
+                        System.out.printf("Session %s:%s %s:%s were finished because of timeout\n",
+                                session.getIp1(),session.getPort1(),session.getIp2(),session.getPort2());
+                        System.out.println("Amount of packets in the session: "+session.getIpV4Packets().size());
+                        FileWriter timedOutWriter = new FileWriter(resultFiles[13],APPEND_TO_FILE);
+                        timedOutWriter.write(String.format("Session %s:%s %s:%s were finished because of timeout\n",
+                                session.getIp1(),session.getPort1(),session.getIp2(),session.getPort2()));
+                        timedOutWriter.close();
+                    }
+                    APPEND_TO_FILE=true;
                 }
             }
+
             //Delete finished sessions
             System.out.println(finishedSessions.size() + " finished sessions have been closed");
             for (TCPSession finished: finishedSessions){
@@ -200,6 +213,8 @@ public class Main implements ConstantsIface{
         resultFnames[10] = "discord "+ resultFnames[7];
         resultFnames[11] = "discord "+ resultFnames[8];
         resultFnames[12] = "discord "+ resultFnames[9];
+
+        resultFnames[13] = "timed out sessions";
 
         for (short i = 0; i < NUMBER_OF_RESULT_FILES; i++){
             resultFiles[i]=RESULTS_PATH + "\\"+resultFnames[i]+".txt";
@@ -718,7 +733,8 @@ public class Main implements ConstantsIface{
                                                     ||
                                 wlanDa.equals(AP_MAC) &&
                                         (wlanSa.equals(STA1_MAC) || wlanSa.equals(STA2_MAC))
-                            ){
+                            )
+                            {
                                 //Position of ip and tcp in Radiotap Payload
                                 int ipPos=40;
                                 int tcpPos=ipPos+20;

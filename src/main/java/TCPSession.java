@@ -16,7 +16,7 @@ public class TCPSession implements ConstantsIface{
     ArrayList<Timestamp>packetTimestamps = new ArrayList<Timestamp>();
     ArrayList <Long> packetNums = new ArrayList<>();
 
-    private int ipToHex(String ip){
+    public int ipToHex(String ip){
         Inet4Address inet4Address = null;
         try {
             inet4Address = (Inet4Address)Inet4Address.getByName(ip);
