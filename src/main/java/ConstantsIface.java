@@ -1,5 +1,5 @@
 public interface ConstantsIface {
-    public static final int NUMBER_OF_RESULT_FILES = 15;
+    public static final int NUMBER_OF_RESULT_FILES = 20;
     public static final String STATION = "sta";
     public static final String ACCESS_POINT = "ap";
 
