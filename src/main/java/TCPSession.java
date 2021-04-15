@@ -18,10 +18,12 @@ public class TCPSession implements ConstantsIface{
     private double timeout = -1;
 
 
-
+//Set timeout value for TCP session
+//      if port is well-known value then timeout is short
+//      else timeout is long
     public void setTimeout(){
         timeout=TIMEOUT_LONG;
-        //if ip1 in our testbed then check ip2:port2
+        //if ip1 in our network then check ip2:port2
         if ((ipToHex(ip1)&TESTBED_MASK) == (TESTBED_HEX_SUBNET&TESTBED_MASK)){
 
             int intPort2 = Integer.parseInt(port2);
@@ -31,7 +33,7 @@ public class TCPSession implements ConstantsIface{
             }
         }
         else{
-            //if ip2 in our testbed then check ip1:port
+            //if ip2 in our network then check ip1:port
             if((ipToHex(ip2)&TESTBED_MASK) == (TESTBED_HEX_SUBNET&TESTBED_MASK)){
 
                 int intPort1 = Integer.parseInt(port1);
@@ -45,6 +47,8 @@ public class TCPSession implements ConstantsIface{
 
     }
 
+    //Convert string ip to int hex value. See more:
+    //https://stackoverflow.com/questions/4209760/validate-an-ip-address-with-mask
     public int ipToHex(String ip){
         Inet4Address inet4Address = null;
         try {
@@ -86,23 +90,25 @@ public class TCPSession implements ConstantsIface{
         return false;
     }
 
-    //Checks if last added packet in session is added more than 12 hours ago
+    //Checks if last added packet in session is added later than timeout
     public boolean checkIsTooLong(Timestamp currPktTimestamp){
 
         Timestamp lastTmstmpInSession = packetTimestamps.get(packetTimestamps.size()-1);
-        //if  last packet in session was added into the session more than 12 hours ago
+
 //        System.out.printf("currPktTimestamp = %s\n",currPktTimestamp.toString());
 //        System.out.printf("lastTmstmpInSession = %s\n",lastTmstmpInSession.toString());
         Double difference = getTimeDelta(currPktTimestamp,lastTmstmpInSession);
 //        System.out.printf("Session lasts = %.6f\n",difference);
         if(timeout<0)
             setTimeout();
+
         //for testing
 //        System.out.printf("Session %s:%s %s:%s are checked\n",
 //                ip1,port1,ip2,port2);
 //        System.out.println("Amount of packets in the session: "+packetTimestamps.size());
 //        System.out.println("TIMEOUT VALUE: "+timeout);
 
+//if  last packet in session was added into the session later than timeout
         if (difference>timeout){
             return true;
         }

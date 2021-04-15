@@ -695,6 +695,7 @@ public class Main implements ConstantsIface{
 
         while ((packet= apPh.getNextPacket())!=null) {
             apPacketCounter++;
+            lastReadTimestamp=apPh.getTimestamp();
             RadiotapPacket radiotapPacket = packet.get(RadiotapPacket.class);
             try {
                 if (radiotapPacket != null) {
@@ -759,7 +760,6 @@ public class Main implements ConstantsIface{
                                 if (ipV4Packet!=null & ipV4Packet.getHeader().getProtocol().toString().equals("6 (TCP)")){
 
 
-                                    lastReadTimestamp=apPh.getTimestamp();
                                     tcpCounter++;
                                     TcpPacket tcpPacket=TcpPacket.newPacket(payload,tcpPos,payloadLength-tcpPos);
 
@@ -789,9 +789,9 @@ public class Main implements ConstantsIface{
                                             }
                                             //All sessions were checked and this packet doesn't belong to any of them
                                             if( i == sessionsSize - 1){
-                                                TCPSession session = new TCPSession(ip1,port1,ip2,port2);
-                                                sessions.add(session);
-                                                session.appendPacket(ipV4Packet,apPh.getTimestamp(),apPacketCounter);
+                                                tcpSession = new TCPSession(ip1,port1,ip2,port2);
+                                                tcpSession.appendPacket(ipV4Packet,apPh.getTimestamp(),apPacketCounter);
+                                                sessions.add(tcpSession);
                                             }
 
                                         }
