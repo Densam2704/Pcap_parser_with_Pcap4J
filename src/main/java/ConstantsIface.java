@@ -1,5 +1,6 @@
 public interface ConstantsIface {
     public static final int NUMBER_OF_RESULT_FILES = 20;
+    public static final boolean APPEND_TO_FILE = true;
     public static final String STATION = "sta";
     public static final String ACCESS_POINT = "ap";
 
@@ -29,7 +30,7 @@ public interface ConstantsIface {
     public static final String TELEGRAM_SUBNET="149.154.164.0";
     public static final int TELEGRAM_BITMASK=22;
     //162.158.0.0
-    public static final int TELEGRAM_HEX_SUBNET=0xa29e0000;
+    public static final int TELEGRAM_HEX_SUBNET=0x959aa400;
     public static final int TELEGRAM_MASK=-1<<(32-TELEGRAM_BITMASK);
 
 //Discord IPs 162.158.0.0 - 162.159.255.255 (162.158.0.0/15)

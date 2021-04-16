@@ -22,7 +22,6 @@ public class Main implements ConstantsIface{
     public static String apPcapFile;
     public static ArrayList<File> apFiles = new ArrayList<>();
     public static ArrayList<File> staFiles = new ArrayList<>();
-    public static  boolean APPEND_TO_FILE = false;
     public static Timestamp lastReadTimestamp = null;
 
     public static void main(String[] args) throws PcapNativeException, NotOpenException, IOException {
@@ -64,7 +63,6 @@ public class Main implements ConstantsIface{
                     }
                     finishedSessions.add(session);
 
-                    APPEND_TO_FILE=true;
                 }
             }
 
@@ -244,11 +242,15 @@ public class Main implements ConstantsIface{
 
         for (short i = 0; i < NUMBER_OF_RESULT_FILES; i++){
             resultFiles[i]=RESULTS_PATH + "\\"+resultFnames[i]+".txt";
+            //If some result files from previous Run are left, delete them
+            if (Files.exists(Paths.get(resultFiles[i]))){
+                Files.delete(Paths.get(resultFiles[i]));
+            }
 
         }
 
-        getPcapFileList(AP_DUMP_PATH,apFiles);
-        getPcapFileList(STA_DUMP_PATH,staFiles);
+        getFileList(AP_DUMP_PATH,apFiles,".pcap");
+        getFileList(STA_DUMP_PATH,staFiles,".pcap");
 
         System.out.println(apFiles.size() + " pcap files have been found in " + AP_DUMP_PATH);
         System.out.println(staFiles.size() + " pcap files have been found in " + STA_DUMP_PATH);
@@ -264,7 +266,7 @@ public class Main implements ConstantsIface{
 
     }
 
-    public static void getPcapFileList(String filepath, ArrayList<File>fileList) {
+    public static void getFileList(String filepath, ArrayList<File>fileList, String endsWith) {
 
         File directory = new File(filepath);
         // get just files, not directories
@@ -276,7 +278,7 @@ public class Main implements ConstantsIface{
 
         //Add pcap files to array list
         for (File f:files){
-            if (f.getName().endsWith(".pcap")){
+            if (f.getName().endsWith(endsWith)){
                 fileList.add(f);
 //                System.out.println(f+" file added to list");
             }
