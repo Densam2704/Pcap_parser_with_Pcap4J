@@ -1,4 +1,4 @@
-public interface ConstantsIface {
+public interface Constants {
     public static final int NUMBER_OF_RESULT_FILES = 20;
     public static final boolean APPEND_TO_FILE = true;
     public static final String STATION = "sta";

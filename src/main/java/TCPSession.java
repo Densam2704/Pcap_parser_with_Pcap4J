@@ -7,7 +7,7 @@ import java.net.UnknownHostException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 
-public class TCPSession implements ConstantsIface{
+public class TCPSession implements Constants{
     private String ip1;
     private String port1;
     private String ip2;
