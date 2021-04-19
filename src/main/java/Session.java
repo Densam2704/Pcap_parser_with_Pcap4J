@@ -1,7 +1,6 @@
 import org.pcap4j.packet.IllegalRawDataException;
 import org.pcap4j.packet.IpV4Packet;
 import org.pcap4j.packet.TcpPacket;
-import sun.rmi.transport.tcp.TCPConnection;
 
 import java.net.Inet4Address;
 import java.net.UnknownHostException;
@@ -17,20 +16,21 @@ public class Session implements Constants{
     
     protected ArrayList<IpV4Packet>ipV4Packets = new ArrayList<IpV4Packet>();
     protected ArrayList<Timestamp>packetTimestamps = new ArrayList<Timestamp>();
-    protected double timeout = -1;
+    private double timeout = -1;
     
-    protected boolean isTCP=false;
-    protected boolean isUDP=false;
+    private boolean isTCP=false;
+    private boolean isUDP=false;
     
 //Set timeout value for  session
 //      if port is well-known value then timeout is short
-//      else timeout is long
-    public void setTimeout(){
+//      else timeout is long or medium depending on TCP/UDP port
+    protected double chooseTimeout(IpV4Packet packet, String port1,String port2){
+        double timeout = 0;
         //default timeouts for non-port-specific sessions
-        if (isTCP)
+        if (checkIsTCP(packet))
             //for tcp
             timeout=TIMEOUT_LONG;
-        else
+        if (checkIsUDP(packet))
             //for udp and icmp
             timeout=TIMEOUT_MEDIUM;
         
@@ -54,7 +54,7 @@ public class Session implements Constants{
                 }
             }
         }
-
+        return timeout;
 
     }
 
@@ -104,22 +104,15 @@ public class Session implements Constants{
     //Checks if last added packet in session is added later than timeout
     public boolean checkIsTooLong(Timestamp currPktTimestamp){
 
-        Timestamp lastTmstmpInSession = packetTimestamps.get(packetTimestamps.size()-1);
+        int sessionSize = packetTimestamps.size();
+        Timestamp lastTmstmpInSession = packetTimestamps.get(sessionSize-1);
 
 //        System.out.printf("currPktTimestamp = %s\n",currPktTimestamp.toString());
 //        System.out.printf("lastTmstmpInSession = %s\n",lastTmstmpInSession.toString());
         Double difference = getTimeDelta(currPktTimestamp,lastTmstmpInSession);
 //        System.out.printf("Session lasts = %.6f\n",difference);
         if(timeout<0)
-            setTimeout();
-
-        //for testing
-//        System.out.printf("Session %s:%s %s:%s are checked\n",
-//                ip1,port1,ip2,port2);
-//        System.out.println("Amount of packets in the session: "+packetTimestamps.size());
-//        System.out.println("TIMEOUT VALUE: "+timeout);
-
-//if  last packet in session was added into the session later than timeout
+            chooseTimeout(ipV4Packets.get(sessionSize-1),port1,port2);
         if (difference>timeout){
             return true;
         }
@@ -269,8 +262,9 @@ public class Session implements Constants{
         ipV4Packets.add(ipV4Packet);
         packetTimestamps.add(arrivalTime);
         if(isFirstPacketInSession()){
-            checkIsTCPUDP(ipV4Packet);
-            setTimeout();
+            isTCP=checkIsTCP(ipV4Packet);
+            isUDP=checkIsUDP(ipV4Packet);
+            timeout= chooseTimeout(ipV4Packet,port1,port2);
         }
         
     }
@@ -281,17 +275,22 @@ public class Session implements Constants{
             return true;
         return false;
     }
-    private void checkIsTCPUDP(IpV4Packet packet){
+    protected boolean checkIsTCP(IpV4Packet packet){
+        if (packet.getHeader().getProtocol().toString().equals(TCP_STRING)){
+            return true;
+        }
+        return false;
+    }
+    
+    protected boolean checkIsUDP(IpV4Packet packet){
         if (packet.getHeader().getProtocol().toString().equals(UDP_STRING)){
-            isUDP=true;
+            return true;
         }
         //ICMPv4 contains UDP, so we count it as UDP
         if (packet.getHeader().getProtocol().toString().equals(ICMPv4_STRING)){
-            isUDP=true;
+            return true;
         }
-        if (packet.getHeader().getProtocol().toString().equals(TCP_STRING)){
-            isTCP=true;
-        }
+        return false;
     }
 
 
@@ -302,19 +301,11 @@ public class Session implements Constants{
     
 
     public Session(String ip1, String port1, String ip2, String port2) {
-        //This is for the sake of having ip1:port1 in TESTBED network
-        if ( (ipToHex(ip1)&TESTBED_MASK) == TESTBED_HEX_SUBNET){
-            this.ip1 = ip1;
-            this.port1 = port1;
-            this.ip2 = ip2;
-            this.port2 = port2;
-        }
-        else {
-            this.ip1 = ip2;
-            this.port1 = port2;
-            this.ip2 = ip1;
-            this.port2 = port1;
-        }
+    
+        this.ip1 = ip1;
+        this.port1 = port1;
+        this.ip2 = ip2;
+        this.port2 = port2;
         
     }
 
