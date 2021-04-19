@@ -3,6 +3,16 @@ public interface Constants {
     public static final boolean APPEND_TO_FILE = true;
     public static final String STATION = "sta";
     public static final String ACCESS_POINT = "ap";
+    
+    
+    public static final int ICMPv4_INT = 1;
+    public static final String ICMPv4_STRING = "1 (ICMPv4)";
+    public static final int UDP_INT = 17;
+    public static final String UDP_STRING = "17 (UDP)";
+    public static final int TCP_INT = 6;
+    public static final String TCP_STRING = "6 (TCP)";
+    
+    public static final int DOT11_DATA = 0x0020;
 
     public static final String STA_DUMP_PATH="C:\\Study\\Magister\\Diploma\\Data\\Captured traffic\\STA";
     public static final String AP_DUMP_PATH="C:\\Study\\Magister\\Diploma\\Data\\Captured traffic\\AP";
@@ -23,6 +33,8 @@ public interface Constants {
     //Timeout value for sessions in seconds
     //1 minute
     public static final double TIMEOUT_SHORT=60;
+    //5 minutes
+    public static final  double TIMEOUT_MEDIUM=300;
     //24 hours
     public static final double TIMEOUT_LONG=86400;
 

@@ -1,34 +1,45 @@
 import org.pcap4j.packet.IllegalRawDataException;
 import org.pcap4j.packet.IpV4Packet;
 import org.pcap4j.packet.TcpPacket;
+import sun.rmi.transport.tcp.TCPConnection;
 
 import java.net.Inet4Address;
 import java.net.UnknownHostException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 
-public class TCPSession implements Constants{
-    private String ip1;
+public class Session implements Constants{
+    protected String ip1;
+    protected String ip2;
+    
     private String port1;
-    private String ip2;
     private String port2;
-    ArrayList<IpV4Packet>ipV4Packets = new ArrayList<IpV4Packet>();
-    ArrayList<Timestamp>packetTimestamps = new ArrayList<Timestamp>();
-    ArrayList <Long> packetNums = new ArrayList<>();
-    private double timeout = -1;
-
-
-//Set timeout value for TCP session
+    
+    protected ArrayList<IpV4Packet>ipV4Packets = new ArrayList<IpV4Packet>();
+    protected ArrayList<Timestamp>packetTimestamps = new ArrayList<Timestamp>();
+    protected double timeout = -1;
+    
+    protected boolean isTCP=false;
+    protected boolean isUDP=false;
+    
+//Set timeout value for  session
 //      if port is well-known value then timeout is short
 //      else timeout is long
     public void setTimeout(){
-        timeout=TIMEOUT_LONG;
+        //default timeouts for non-port-specific sessions
+        if (isTCP)
+            //for tcp
+            timeout=TIMEOUT_LONG;
+        else
+            //for udp and icmp
+            timeout=TIMEOUT_MEDIUM;
+        
+        //Short timeouts for port-specific sessions
         //if ip1 in our network then check ip2:port2
         if ((ipToHex(ip1)&TESTBED_MASK) == (TESTBED_HEX_SUBNET&TESTBED_MASK)){
-
             int intPort2 = Integer.parseInt(port2);
             // if it's common port
-            if (intPort2 > 0 && intPort2 < 1024){
+            if (intPort2 >= 0 && intPort2 <= 49151){
                 timeout=TIMEOUT_SHORT;
             }
         }
@@ -117,6 +128,9 @@ public class TCPSession implements Constants{
 
     //Look for FIN tcp. Returns true if FIN is found.
     public boolean checkIsFinished(){
+        if (! isTCP)
+            return false;
+        
         int len = ipV4Packets.size();
         //If we don't find FIN in 10 last packets then there is likely no FIN
         int breakAfter = (len - 1) - 10;
@@ -176,6 +190,9 @@ public class TCPSession implements Constants{
     public Timestamp getStartTime() {
         //if there is no handshake, then we will take timestamp of the first packet
         Timestamp timestamp=packetTimestamps.get(0);
+        
+        if(!isTCP)
+            return timestamp;
 
         int len = ipV4Packets.size()-2;
         for (int i = 0 ; i<len; i++){
@@ -218,6 +235,8 @@ public class TCPSession implements Constants{
     public Timestamp getEndTime(){
         //If there is no FIN, we will take time of the last packet
         Timestamp timestamp=packetTimestamps.get(packetTimestamps.size()-1);
+        if(!isTCP)
+            return timestamp;
         int len = ipV4Packets.size();
         for (int i = len-1 ; i>=0; i--) {
             //TCP session ends with FIN
@@ -235,7 +254,7 @@ public class TCPSession implements Constants{
         return timestamp;
     }
 
-    //Check if the ip1:port1 ip2:port2 belong to the TCPSession
+    //Check if the ip1:port1 ip2:port2 belong to the Session
     public boolean isInTheSession(String ip1, String port1, String ip2, String port2){
         if (this.ip1.equals(ip1) && this.port1.equals(port1) && this.ip2.equals(ip2) && this.port2.equals(port2))
             return true;
@@ -246,27 +265,69 @@ public class TCPSession implements Constants{
     }
 
     //Adds packet to the session
-    public void appendPacket(IpV4Packet ipV4Packet, Timestamp arrivalTime, long packetNum){
-            ipV4Packets.add(ipV4Packet);
-            packetTimestamps.add(arrivalTime);
-            packetNums.add(packetNum);
+    public void appendPacket(IpV4Packet ipV4Packet, Timestamp arrivalTime){
+        ipV4Packets.add(ipV4Packet);
+        packetTimestamps.add(arrivalTime);
+        if(isFirstPacketInSession()){
+            checkIsTCPUDP(ipV4Packet);
+            setTimeout();
+        }
+        
+    }
+    
+    //
+    private boolean isFirstPacketInSession(){
+        if(ipV4Packets.size()==1)
+            return true;
+        return false;
+    }
+    private void checkIsTCPUDP(IpV4Packet packet){
+        if (packet.getHeader().getProtocol().toString().equals(UDP_STRING)){
+            isUDP=true;
+        }
+        //ICMPv4 contains UDP, so we count it as UDP
+        if (packet.getHeader().getProtocol().toString().equals(ICMPv4_STRING)){
+            isUDP=true;
+        }
+        if (packet.getHeader().getProtocol().toString().equals(TCP_STRING)){
+            isTCP=true;
+        }
     }
 
 
     // Constructors
 
-    public TCPSession() {
+    public Session() {
     }
+    
 
-    public TCPSession(String ip1, String port1, String ip2, String port2) {
-        this.ip1 = ip1;
-        this.port1 = port1;
-        this.ip2 = ip2;
-        this.port2 = port2;
+    public Session(String ip1, String port1, String ip2, String port2) {
+        //This is for the sake of having ip1:port1 in TESTBED network
+        if ( (ipToHex(ip1)&TESTBED_MASK) == TESTBED_HEX_SUBNET){
+            this.ip1 = ip1;
+            this.port1 = port1;
+            this.ip2 = ip2;
+            this.port2 = port2;
+        }
+        else {
+            this.ip1 = ip2;
+            this.port1 = port2;
+            this.ip2 = ip1;
+            this.port2 = port1;
+        }
+        
     }
 
     //Getters and Setters
-
+    
+    public boolean isTCP() {
+        return isTCP;
+    }
+    
+    public boolean isUDP() {
+        return isUDP;
+    }
+    
     public double getTimeout(){
         return timeout;
     }
@@ -310,8 +371,5 @@ public class TCPSession implements Constants{
     public ArrayList<Timestamp> getPacketTimestamps() {
         return packetTimestamps;
     }
-
-    public ArrayList<Long> getPacketNums() {
-        return packetNums;
-    }
+    
 }

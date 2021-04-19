@@ -17,7 +17,7 @@ import java.util.concurrent.TimeoutException;
 
 public class Main implements Constants{
     
-    public static ArrayList<TCPSession>sessions = new ArrayList<>();
+    public static ArrayList<Session>sessions = new ArrayList<>();
     public static String staPcapFile;
     public static String apPcapFile;
     public static ArrayList<File> apFiles = new ArrayList<>();
@@ -30,7 +30,7 @@ public class Main implements Constants{
         init();
         
         int fNum=0;
-        int tcpNum=0;
+        int sessionNum=0;
         int dsNum=0;
         int telegNum=0;
         int size = apFiles.size();
@@ -40,12 +40,16 @@ public class Main implements Constants{
             find_sessions();
             
             int sessionSize = sessions.size();
-            TCPSession session;
-            ArrayList<TCPSession>finishedSessions= new ArrayList<>();
+            Session session;
+            ArrayList<Session>finishedSessions= new ArrayList<>();
+    
+            System.out.println(sessionSize + " sessions are found ");
             
             //Look for finished sessions and write them to file
             for (int j = 0 ; j < sessionSize; j++){
                 session=sessions.get(j);
+    
+                
                 boolean isFinished = session.checkIsFinished();
                 boolean isTooLong = session.checkIsTooLong(lastReadTimestamp);
                 boolean isDiscord = session.checkIsDiscord();
@@ -53,15 +57,15 @@ public class Main implements Constants{
                 //If the session was finished or if the last added packet was added too long ago
                 //If this is the last file
                 if (isFinished||isTooLong||i==size-1){
-                    tcpNum++;
-                    analyseTCPSession(session,resultFiles[7],resultFiles[8],resultFiles[9], resultFiles[10]);
+                    sessionNum++;
+                    analyseSession(session,resultFiles[7],resultFiles[8],resultFiles[9], resultFiles[10]);
                     if(isDiscord){
                         dsNum++;
-                        analyseTCPSession(session,resultFiles[11],resultFiles[12],resultFiles[13], resultFiles[14]);
+                        analyseSession(session,resultFiles[11],resultFiles[12],resultFiles[13], resultFiles[14]);
                     }
                     if(isTelegram){
                         telegNum++;
-                        analyseTCPSession(session,resultFiles[15],resultFiles[16],resultFiles[17], resultFiles[18]);
+                        analyseSession(session,resultFiles[15],resultFiles[16],resultFiles[17], resultFiles[18]);
                     }
                     finishedSessions.add(session);
                     
@@ -70,32 +74,16 @@ public class Main implements Constants{
             
             //Delete finished sessions
             System.out.println(finishedSessions.size() + " finished sessions have been closed");
-            for (TCPSession finished: finishedSessions){
+            for (Session finished: finishedSessions){
                 sessions.remove(finished);
             }
             finishedSessions=null;
         }
-        //TODO test changes
-//        // If any sessions left
-//        int sessionSize = sessions.size();
-//        TCPSession session;
-//        for (int i = 0 ; i < sessionSize; i++){
-//            session=sessions.get(i);
-//            tcpNum++;
-//            analyseTCPSession(session,resultFiles[7],resultFiles[8],resultFiles[9], resultFiles[10]);
-//            if(session.checkIsDiscord()){
-//                analyseTCPSession(session,resultFiles[11],resultFiles[12],resultFiles[13], resultFiles[14]);
-//                dsNum++;
-//            }
-//            if(session.checkIsTelegram()){
-//                analyseTCPSession(session,resultFiles[15],resultFiles[16],resultFiles[17], resultFiles[18]);
-//                telegNum++;
-//            }
-//        }
         
-        System.out.println(" TCP sessions total number: " + tcpNum);
-        System.out.println(" discord TCP sessions total number: " + dsNum);
-        System.out.println(" telegram TCP sessions total number: " + telegNum);
+        
+        System.out.println(" Sessions total number: " + sessionNum);
+        System.out.println(" discord sessions total number: " + dsNum);
+        System.out.println(" telegram sessions total number: " + telegNum);
 
 
 //        for (File staFile:staFiles){
@@ -712,7 +700,8 @@ public class Main implements Constants{
         
         int apPacketCounter = 0;
         //for testing purposes
-        int tcpCounter= 0;
+        int tcpCounter = 0;
+        int udpCounter = 0;
         Packet packet = null;
         
         while ((packet= apPh.getNextPacket())!=null) {
@@ -728,100 +717,92 @@ public class Main implements Constants{
                             (byte) (((payload[0] << 2) & 0x30) | ((payload[0] >> 4) & 0x0F))
                     );
                     //Looking only for  IEEE802.11 data frames in a Type/Subtype field
-                    if(type.value()==0x0020) {
-//                        case 0x0020:
-//                          //IEEE802.11 data frames
-//                            System.out.println("Wlan data frame");
-                        
-                        
-                        short wlanAddrLen=6;
-                        //Destination address position in payload
-                        short wlanDaPos=4;
-                        //Source address position in payload in case of 3 addresses used in WLAN frame
-                        short wlanSaPos=10;
-                        
-                        //There is a case when source address is a 4th address in a WLAN frame
-                        if (payload[0]==0x08 && payload[1]==0x42){
-                            wlanSaPos=16;
+                    //that belong to our network
+                    if(type.value()==DOT11_DATA && (belongsToTestbed(payload)))
+                    {
+                        //Position of ip and port in Radiotap Payload
+                        int ipPos=40;
+                        int portPos=ipPos+20;
+                        IpV4Packet ipV4Packet=null;
+                        try{
+                            ipV4Packet=IpV4Packet.newPacket(payload,ipPos,payloadLength-ipPos);
                         }
-                        
-                        byte[]byteWlanSa = new byte [wlanAddrLen];
-                        System.arraycopy(payload,wlanSaPos,byteWlanSa,0,wlanAddrLen);
-                        String wlanSa = byteArrToHexStr(byteWlanSa);
-                        
-                        byte[]byteWlanDa = new byte [wlanAddrLen];
-                        System.arraycopy(payload,wlanDaPos,byteWlanDa,0,wlanAddrLen);
-                        String wlanDa = byteArrToHexStr(byteWlanDa);
-                        
-                        //If SA and DA in both AP and STA are equal and
-                        //If checksums in both AP and STA packets are equal
-                        //then we have found exactly the same packet
-                        //in AP file. And we can take timestamp from this packet
-                        
-                        // If traffic belongs to our STAs or to our AP
-                        if ( (wlanDa.equals(STA1_MAC) || wlanDa.equals(STA2_MAC))
-                                && wlanSa.equals(AP_MAC)
-                                ||
-                                wlanDa.equals(AP_MAC) &&
-                                        (wlanSa.equals(STA1_MAC) || wlanSa.equals(STA2_MAC))
-                        )
-                        {
-                            //Position of ip and tcp in Radiotap Payload
-                            int ipPos=40;
-                            int tcpPos=ipPos+20;
-                            IpV4Packet ipV4Packet=null;
-                            try{
-                                ipV4Packet=IpV4Packet.newPacket(payload,ipPos,payloadLength-ipPos);
-                            }
-                            catch (Exception e){
+                        catch (Exception e){
 //                                    System.out.println(e.getMessage());
+                        }
+        
+        
+                        // if ip packet is not null
+                        if (ipV4Packet!=null ){
+                            String ip1="",ip2="",port1="",port2="";
+                            boolean isTcp=false,isUdp=false;
+            
+                            ip1 = ipV4Packet.getHeader().getSrcAddr().getHostAddress();
+                            ip2 = ipV4Packet.getHeader().getDstAddr().getHostAddress();
+            
+                            int protocol = Integer.parseInt(ipV4Packet.getHeader().getProtocol().valueAsString());
+            
+                            switch (protocol){
+                                case UDP_INT:
+                                    udpCounter++;
+                                    UdpPacket udpPacket=UdpPacket.newPacket(payload,portPos,payloadLength-portPos);
+                                    port1 = String.valueOf(udpPacket.getHeader().getSrcPort().valueAsInt());
+                                    port2 = String.valueOf(udpPacket.getHeader().getDstPort().valueAsInt());
+                                    break;
+                                case TCP_INT:
+                                    tcpCounter++;
+                                    TcpPacket tcpPacket=TcpPacket.newPacket(payload,portPos,payloadLength-portPos);
+                                    port1 = String.valueOf(tcpPacket.getHeader().getSrcPort().valueAsInt());
+                                    port2 = String.valueOf(tcpPacket.getHeader().getDstPort().valueAsInt());
+                                    break;
+                                case ICMPv4_INT:
+                                    //ICMPv4 contains UDP, so we count it as UDP
+                                    udpCounter++;
+                                    //Position of UDP in ICMPv4 protocol
+                                    portPos=ipPos+8+20;
+                                    udpPacket = UdpPacket.newPacket(payload, portPos, payloadLength - portPos);
+                                    port1 = String.valueOf(udpPacket.getHeader().getSrcPort().valueAsInt());
+                                    port2 = String.valueOf(udpPacket.getHeader().getDstPort().valueAsInt());
+                                    break;
+                                default:
+                                    break;
                             }
-                            
-                            
-                            // if ip packet contains tcp
-                            if (ipV4Packet!=null & ipV4Packet.getHeader().getProtocol().toString().equals("6 (TCP)")){
-                                
-                                
-                                tcpCounter++;
-                                TcpPacket tcpPacket=TcpPacket.newPacket(payload,tcpPos,payloadLength-tcpPos);
-                                
-                                String ip1 = ipV4Packet.getHeader().getSrcAddr().getHostAddress();
-                                String port1 = String.valueOf(tcpPacket.getHeader().getSrcPort().valueAsInt());
-                                String ip2 = ipV4Packet.getHeader().getDstAddr().getHostAddress();
-                                String port2 = String.valueOf(tcpPacket.getHeader().getDstPort().valueAsInt());
-                                
-                                //Add to sessions arraylist.
-                                
-                                int sessionsSize = sessions.size();
-                                //If sessions arraylist is empty
-                                if (sessionsSize == 0){
-                                    TCPSession session = new TCPSession(ip1,port1,ip2,port2);
-                                    session.appendPacket(ipV4Packet,apPh.getTimestamp(),apPacketCounter);
-                                    sessions.add(session);
-                                }
-                                //Else check in sessions arraylist
-                                else {
-                                    for (int i = 0; i < sessionsSize; i++){
-                                        //if we have found already existing session
-                                        TCPSession tcpSession = sessions.get(i);
-                                        if (tcpSession.isInTheSession(ip1,port1,ip2,port2)){
-                                            //add packet to the session and break the cycle FOR
-                                            tcpSession.appendPacket(ipV4Packet,apPh.getTimestamp(),apPacketCounter);
-                                            break;
-                                        }
-                                        //All sessions were checked and this packet doesn't belong to any of them
-                                        if( i == sessionsSize - 1){
-                                            tcpSession = new TCPSession(ip1,port1,ip2,port2);
-                                            tcpSession.appendPacket(ipV4Packet,apPh.getTimestamp(),apPacketCounter);
-                                            sessions.add(tcpSession);
-                                        }
-                                        
+                            if (port1.equals(null)||port2.equals((null))||port1.equals("")||port2.equals("")){
+//                                    System.out.println("trouble packet+ "+ apPacketCounter + "\n"+ipV4Packet.toString());
+                                break;
+                            }
+            
+                            //Add to sessions arraylist.
+            
+                            int sessionsSize = sessions.size();
+                            //If sessions arraylist is empty
+                            if (sessionsSize == 0){
+                                Session session = new Session(ip1,port1,ip2,port2);
+                                session.appendPacket(ipV4Packet,apPh.getTimestamp());
+                                sessions.add(session);
+                            }
+                            //Else check in sessions arraylist
+                            else {
+                                for (int i = 0; i < sessionsSize; i++){
+                                    //if we have found already existing session
+                                    Session session = sessions.get(i);
+                                    if (session.isInTheSession(ip1,port1,ip2,port2)){
+                                        //add packet to the session and break the cycle FOR
+                                        session.appendPacket(ipV4Packet,apPh.getTimestamp());
+                                        break;
                                     }
+                                    //All sessions were checked and this packet doesn't belong to any of them
+                                    if( i == sessionsSize - 1){
+                                        session = new Session(ip1,port1,ip2,port2);
+                                        session.appendPacket(ipV4Packet,apPh.getTimestamp());
+                                        sessions.add(session);
+                                    }
+                    
                                 }
                             }
                         }
-                        
                     }
+    
                 }
             }
             catch (Exception e) {
@@ -830,18 +811,55 @@ public class Main implements Constants{
             
         }
         
-        System.out.println(sessions.size() + " TCP sessions are opened at the moment ");
-        System.out.println(tcpCounter + " tcp packets have been found in " + apPcapFile);
+//        System.out.println(tcpCounter + " tcp packets have been found in " + apPcapFile);
+//        System.out.println(udpCounter + " udp packets have been found in " + apPcapFile);
         System.out.println("All " + apPacketCounter + " packets have been read from AP file " + apPcapFile );
         
         apPh.close();
         
     }
     
+    private static boolean belongsToTestbed(byte[]payload) {
+        //Standard MAC length
+        short wlanAddrLen=6;
+        //Destination address position in payload
+        short wlanDaPos=4;
+        //Source address position in payload in case of 3 addresses used in WLAN frame
+        short wlanSaPos=10;
+    
+        //There is a case when source address is a 4th address in a WLAN frame
+        if (payload[0]==0x08 && payload[1]==0x42){
+            wlanSaPos=16;
+        }
+    
+        byte[]byteWlanSa = new byte [wlanAddrLen];
+        System.arraycopy(payload,wlanSaPos,byteWlanSa,0,wlanAddrLen);
+        String wlanSa = byteArrToHexStr(byteWlanSa);
+    
+        byte[]byteWlanDa = new byte [wlanAddrLen];
+        System.arraycopy(payload,wlanDaPos,byteWlanDa,0,wlanAddrLen);
+        String wlanDa = byteArrToHexStr(byteWlanDa);
+    
+        //If SA and DA in both AP and STA are equal and
+        //If checksums in both AP and STA packets are equal
+        //then we have found exactly the same packet
+        //in AP file. And we can take timestamp from this packet
+    
+        // If traffic belongs to our STAs or to our AP
+        if ( (wlanDa.equals(STA1_MAC) || wlanDa.equals(STA2_MAC))
+                && wlanSa.equals(AP_MAC)
+                ||
+                wlanDa.equals(AP_MAC) &&
+                        (wlanSa.equals(STA1_MAC) || wlanSa.equals(STA2_MAC))
+        )
+            return true;
+        return false;
+    }
+    
     
     //Write parameters of session to files
-    private static void analyseTCPSession(TCPSession session, String FileForDuration,
-                                          String FileForInterval, String FileForLength, String FileForTimedOut) throws IOException {
+    private static void analyseSession(Session session, String FileForDuration,
+                                       String FileForInterval, String FileForLength, String FileForTimedOut) throws IOException {
         
         
         //Packet Lengths
@@ -881,7 +899,7 @@ public class Main implements Constants{
         else{
             durWriter.write(String.format("%.9f\n",0.0).replaceAll(",", "."));
             //For testing
-//                System.out.printf("File:%s\n tcp session %s:%s %s:%s has bad duration %f\n",apPcapFile,session.getIp1(),
+//                System.out.printf("File:%s\n session %s:%s %s:%s has bad duration %f\n",apPcapFile,session.getIp1(),
 //                        session.getPort1(),session.getIp2(),session.getPort2(),dur);
 //                System.out.printf("Session start time: %s\nSession end time: %s\n",
 //                        session.getStartTime().toString(),session.getEndTime());
@@ -896,13 +914,15 @@ public class Main implements Constants{
 //                                session.getIp1(),session.getPort1(),session.getIp2(),session.getPort2());
 //                        System.out.println("Amount of packets in the session: "+session.getIpV4Packets().size());
             FileWriter timedOutWriter = new FileWriter(FileForTimedOut,APPEND_TO_FILE);
-            timedOutWriter.write(String.format("Session %s:%s %s:%s were finished because of timeout\t",
+            timedOutWriter.write(String.format("Session %s:%s %s:%s was finished because of timeout\t",
                     session.getIp1(),session.getPort1(),session.getIp2(),session.getPort2()));
-            timedOutWriter.write(String.format("Amount of packets in the session: %d\n",
+            timedOutWriter.write(String.format("Amount of packets in the session: %d\t",
                     session.getIpV4Packets().size()));
+            timedOutWriter.write(String.format("Session was considered timed out after reading: %s\n",
+                    apPcapFile));
             timedOutWriter.close();
         }
-        
+
     }
     
     //sample. TODO Delete it. When I finish the program
