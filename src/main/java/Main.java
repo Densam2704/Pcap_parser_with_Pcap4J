@@ -60,7 +60,7 @@ public class Main implements Constants {
 	for (int i = 0; i < sizeApFiles; i++) {
 	  System.out.println("\nReading file " + ++fNum + " out of " + sizeApFiles);
 	  apPcapFile = AP_DUMP_PATH + "\\" + apFiles.get(i).getName();
-	  find_sessions();
+	  readFileAndFindSessions();
 	  
 	  int sessionSize = sessions.size();
 	  Session session;
@@ -82,8 +82,8 @@ public class Main implements Constants {
 		if (isFinished || isTooLong || i == sizeApFiles - 1) {
 		  sessionNum++;
 		  analyseSession(session, resultFiles[7], resultFiles[8], resultFiles[9], resultFiles[10]);
-		  //TODO delete it
 		  
+		  //This is an alternate way of getting Multimedia statistics
 //                    if(isDiscord){
 //                        dsNum++;
 //                        analyseSession(session,resultFiles[11],resultFiles[12],resultFiles[13], resultFiles[14]);
@@ -626,7 +626,7 @@ public class Main implements Constants {
   }
   
   //Find all sessions in apPcapFile
-  private static void find_sessions() throws PcapNativeException, NotOpenException, IOException {
+  private static void readFileAndFindSessions() throws PcapNativeException, NotOpenException, IOException {
 	
 	PcapHandle apPh = Pcaps.openOffline(apPcapFile);
 	
@@ -697,9 +697,10 @@ public class Main implements Constants {
 				default:
 				  break;
 			  }
+			  //Unless protocol is TCP/UDP/ICMP, go to the next packet.
 			  if (port1.equals(null) || port2.equals((null)) || port1.equals("") || port2.equals("")) {
-//                                    System.out.println("trouble packet+ "+ apPacketCounter + "\n"+ipV4Packet.toString());
-				break;
+//				System.out.println("trouble packet+ "+ apPacketCounter + "\n"+ipV4Packet.toString());
+				continue;
 			  }
 			  
 			  //Add packet to session arraylist.
