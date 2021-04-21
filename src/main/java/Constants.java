@@ -4,7 +4,6 @@ public interface Constants {
     public static final String STATION = "sta";
     public static final String ACCESS_POINT = "ap";
     
-    
     public static final int ICMPv4_INT = 1;
     public static final String ICMPv4_STRING = "1 (ICMPv4)";
     public static final int UDP_INT = 17;
