@@ -19,6 +19,7 @@ public class Main implements Constants {
   
   public static ArrayList<Session> sessions = new ArrayList<>();
   public static ArrayList<MultimediaSession> dsSessions = new ArrayList<>();
+  public static ArrayList<MultimediaSession> telegramSessions = new ArrayList<>();
   public static String staPcapFile;
   public static String apPcapFile;
   public static ArrayList<File> apFiles = new ArrayList<>();
@@ -46,91 +47,6 @@ public class Main implements Constants {
 
 //        find_sessions();
 	
-	
-  }
-  
-  private static void readApFilesAndAnalise() throws PcapNativeException, IOException, NotOpenException {
-	
-	int fNum = 0;
-	int sessionNum = 0;
-	int dsNum = 0;
-	int telegNum = 0;
-	int sizeApFiles = apFiles.size();
-	
-	for (int i = 0; i < sizeApFiles; i++) {
-	  System.out.println("\nReading file " + ++fNum + " out of " + sizeApFiles);
-	  apPcapFile = AP_DUMP_PATH + "\\" + apFiles.get(i).getName();
-	  readFileAndFindSessions();
-	  
-	  int sessionSize = sessions.size();
-	  Session session;
-	  ArrayList<Session> finishedSessions = new ArrayList<>();
-	  
-	  System.out.println(sessionSize + " sessions are found ");
-	  
-	  //Look for finished sessions and write them to file
-	  for (int j = 0; j < sessionSize; j++) {
-		session = sessions.get(j);
-		
-		
-		boolean isFinished = session.checkIsFinished();
-		boolean isTooLong = session.checkIsTooLong(lastReadTimestamp);
-//                boolean isDiscord = session.checkIsDiscord();
-//                boolean isTelegram = session.checkIsTelegram();
-		//If the session was finished or if the last added packet was added too long ago
-		//If this is the last file
-		if (isFinished || isTooLong || i == sizeApFiles - 1) {
-		  sessionNum++;
-		  analyseSession(session, resultFiles[7], resultFiles[8], resultFiles[9], resultFiles[10]);
-		  
-		  //This is an alternate way of getting Multimedia statistics
-//                    if(isDiscord){
-//                        dsNum++;
-//                        analyseSession(session,resultFiles[11],resultFiles[12],resultFiles[13], resultFiles[14]);
-//                    }
-//                    if(isTelegram){
-//                        telegNum++;
-//                        analyseSession(session,resultFiles[15],resultFiles[16],resultFiles[17], resultFiles[18]);
-//                    }
-		  finishedSessions.add(session);
-		  
-		}
-	  }
-	  
-	  //Delete finished sessions
-	  System.out.println(finishedSessions.size() + " finished sessions have been closed");
-	  for (Session finished : finishedSessions) {
-		sessions.remove(finished);
-	  }
-	  
-	  finishedSessions = new ArrayList<>();
-	  
-	  int dsSize = dsSessions.size();
-	  System.out.println(dsSize + " discord sessions are found ");
-	  for (int j = 0; j < dsSize; j++) {
-		MultimediaSession dsSession = dsSessions.get(j);
-		boolean isFinished = dsSession.checkIsFinished();
-		boolean isTooLong = dsSession.checkIsTooLong(lastReadTimestamp);
-		if (isFinished || isTooLong || i == sizeApFiles - 1) {
-		  dsNum++;
-		  analyseSession(dsSession, resultFiles[11], resultFiles[12], resultFiles[13], resultFiles[14]);
-		  finishedSessions.add(dsSession);
-		}
-		
-	  }
-	  //Delete finished sessions
-	  System.out.println(finishedSessions.size() + " finished discord sessions have been closed");
-	  for (Session finished : finishedSessions) {
-		dsSessions.remove(finished);
-	  }
-	  
-	  
-	}
-	
-	
-	System.out.println(" Sessions total number: " + sessionNum);
-	System.out.println(" discord sessions total number: " + dsNum);
-//        System.out.println(" telegram sessions total number: " + telegNum);
 	
   }
   
@@ -178,8 +94,8 @@ public class Main implements Constants {
 	getFileList(AP_DUMP_PATH, apFiles, ".pcap");
 	getFileList(STA_DUMP_PATH, staFiles, ".pcap");
 	
-	System.out.println(apFiles.size() + " pcap files have been found in " + AP_DUMP_PATH);
-	System.out.println(staFiles.size() + " pcap files have been found in " + STA_DUMP_PATH);
+	System.out.println(apFiles.size() + " pcap files were found in " + AP_DUMP_PATH);
+	System.out.println(staFiles.size() + " pcap files were found in " + STA_DUMP_PATH);
 
 //        String staFilename = "sta.pcap";
 
@@ -191,6 +107,126 @@ public class Main implements Constants {
 	//String apFileName = "exported2.pcap" ;
 	
   }
+  
+  private static void readApFilesAndAnalise() throws PcapNativeException, IOException, NotOpenException {
+  
+	int fNum = 0;
+	int sessionsTotal = 0;
+	int dsTotal = 0;
+	int telegTotal = 0;
+	int sizeApFiles = apFiles.size();
+	String[] analysisResultFiles = Arrays.copyOfRange(resultFiles, 7, 11);
+	String[] dsAnalysisResultFiles = Arrays.copyOfRange(resultFiles, 11, 15);
+	String[] telegramAnalysisResultFiles = Arrays.copyOfRange(resultFiles, 15, 19);
+ 
+	for (int i = 0; i < sizeApFiles; i++){
+//	for (int i = 11; i < 12; i++) {
+	  System.out.println("\nReading file " + ++fNum + " out of " + sizeApFiles);
+	  apPcapFile = AP_DUMP_PATH + "\\" + apFiles.get(i).getName();
+	  readFileAndFindSessions();
+	
+	  boolean isLastFile = false;
+	  if (i == sizeApFiles - 1) {
+		isLastFile = true;
+	  }
+	  
+	  int before=0,after=0;
+	  
+	  before=sessions.size();
+	  System.out.println(before + " sessions are found ");
+	  analiseSession(sessions, analysisResultFiles, isLastFile);
+	  after=sessions.size();
+	  System.out.println(after + " sessions are left opened \n");
+	  sessionsTotal+=before-after;
+	  
+	  before=dsSessions.size();
+	  System.out.println(before+" discord sessions found");
+	  analiseMultimediaSession(dsSessions, dsAnalysisResultFiles, isLastFile);
+	  after=dsSessions.size();
+	  System.out.println(after+" discord left opened\n");
+	  dsTotal+=before-after;
+	  
+	  before=telegramSessions.size();
+	  System.out.println(before+" telegram sessions found");
+	  analiseMultimediaSession(telegramSessions, telegramAnalysisResultFiles, isLastFile);
+	  after=telegramSessions.size();
+	  System.out.println(after+" telegram left opened\n");
+	  telegTotal+=before-after;
+	  
+	  
+	  System.out.println(" Sessions total number: " + sessionsTotal);
+	  System.out.println(" discord sessions total number: " + dsTotal);
+	  System.out.println(" telegram sessions total number: " + telegTotal);
+	
+	}
+  }
+  
+  private static void analiseSession(ArrayList<Session>sessions,String[]resultFiles,boolean isLastFile)
+		  throws IOException {
+  
+	int sessionSize = sessions.size();
+	Session session;
+	ArrayList<Session> finishedSessions = new ArrayList<>();
+	
+	//Look for finished sessions and write them to file
+	for (int j = 0; j < sessionSize; j++) {
+	  session = sessions.get(j);
+	
+	
+	  boolean isFinished = session.checkIsFinished();
+	  boolean isTooLong = session.checkIsTooLong(lastReadTimestamp);
+//                boolean isDiscord = session.checkIsDiscord();
+//                boolean isTelegram = session.checkIsTelegram();
+	  //If the session was finished or if the last added packet was added too long ago
+	  //If this is the last file
+	  if (isFinished || isTooLong || isLastFile) {
+		writeSessionParamsToFiles(session,resultFiles);
+	 
+		//This is an alternate way of getting Multimedia statistics
+//                    if(isDiscord){
+//                        dsNum++;
+//                        analyseSession(session,resultFiles[11],resultFiles[12],resultFiles[13], resultFiles[14]);
+//                    }
+//                    if(isTelegram){
+//                        telegNum++;
+//                        analyseSession(session,resultFiles[15],resultFiles[16],resultFiles[17], resultFiles[18]);
+//                    }
+		finishedSessions.add(session);
+	  
+	  }
+	}
+ 
+	//Delete finished sessions
+	System.out.println(finishedSessions.size() + " finished sessions were closed");
+	for (Session finished : finishedSessions) {
+	  sessions.remove(finished);
+	}
+  }
+  
+  
+  private static void analiseMultimediaSession(ArrayList<MultimediaSession> multimediaSessions, String[] resultFiles,
+											   boolean isLastFile) throws IOException {
+	ArrayList<MultimediaSession>finishedSessions = new ArrayList<>();
+ 
+	int dsSize = multimediaSessions.size();
+	for (int j = 0; j < dsSize; j++) {
+	  MultimediaSession multimediaSession = multimediaSessions.get(j);
+	  boolean isFinished = multimediaSession.checkIsFinished();
+	  boolean isTooLong = multimediaSession.checkIsTooLong(lastReadTimestamp);
+	  if (isFinished || isTooLong || isLastFile) {
+		writeSessionParamsToFiles(multimediaSession,resultFiles);
+		finishedSessions.add(multimediaSession);
+	  }
+	  
+	}
+	//Delete finished sessions
+	System.out.println(finishedSessions.size() + " finished sessions were closed");
+	for (Session finished : finishedSessions) {
+	  multimediaSessions.remove(finished);
+	}
+	
+  }
+  
   
   public static void getFileList(String filepath, ArrayList<File> fileList, String fileFormat) {
 	
@@ -248,7 +284,7 @@ public class Main implements Constants {
 	packetLengthWriter.close();
 	staPh.close();
 	System.out.println("time delta from previous captured frame. (packets from Station to AP) (Station side)");
-	System.out.println(packetNumber + " packets have been read from " + staPcapFile);
+	System.out.println(packetNumber + " packets were read from " + staPcapFile);
 	System.out.println();
 	
   }
@@ -325,7 +361,7 @@ public class Main implements Constants {
 	  
 	}
 	System.out.println(filteredPackets + " packets were captured from our stations " + apPcapFile);
-	System.out.println(packetNumber + " packets have been read from " + apPcapFile);
+	System.out.println(packetNumber + " packets were read from " + apPcapFile);
 	System.out.println();
 	timesWriter.close();
 	packetLengthWriter.close();
@@ -396,7 +432,7 @@ public class Main implements Constants {
 			  
 			  tcpTimeDeltaWriter.write(String.format("%.9f\n", delta1).replaceAll(",", "."));
 			  
-			  System.out.println(staPacketCounter + " packets have been read from " + staPcapFile);
+			  System.out.println(staPacketCounter + " packets were read from " + staPcapFile);
 			  System.out.println();
 			  
 			  tcpTimeDeltaWriter.close();
@@ -415,7 +451,7 @@ public class Main implements Constants {
 	tcpTimeDeltaWriter.close();
 	staPh.close();
 	System.out.println(staPacketCounter
-			+ " packets have been read from " + staPcapFile);
+			+ " packets were read from " + staPcapFile);
 	System.out.println();
 	return false;
   }
@@ -483,7 +519,7 @@ public class Main implements Constants {
 			  System.out.println("delta2 = " + delta2);
 			  
 			  tcpTimeDeltaWriter.write(String.format("%.9f\n", delta2).replaceAll(",", "."));
-			  System.out.println(staPacketCounter + " packets have been read from " + staPcapFile);
+			  System.out.println(staPacketCounter + " packets were read from " + staPcapFile);
 			  System.out.println();
 			  
 			  tcpTimeDeltaWriter.close();
@@ -501,7 +537,7 @@ public class Main implements Constants {
 	
 	tcpTimeDeltaWriter.close();
 	staPh.close();
-	System.out.println(staPacketCounter + " packets have been read from " + staPcapFile);
+	System.out.println(staPacketCounter + " packets were read from " + staPcapFile);
 	System.out.println();
 	return false;
   }
@@ -620,7 +656,7 @@ public class Main implements Constants {
 	  }
 	  
 	}
-	System.out.println("All" + apPacketCounter + " packets have been read from AP file");
+	System.out.println("All" + apPacketCounter + " packets were read from AP file");
 	apPh.close();
 	return null;
   }
@@ -705,9 +741,14 @@ public class Main implements Constants {
 			  
 			  //Add packet to session arraylist.
 			  Session session = new Session(ip1, port1, ip2, port2);
-			  addPacketToSessionList(session, ipV4Packet, apPh.getTimestamp());
+			  addPacketToSessionList(sessions,session, ipV4Packet, apPh.getTimestamp());
+			  
+			  //Add packet to Multimedia lists
 			  if (session.checkIsDiscord()) {
-				addPacketToDiscordSessionList(session, ipV4Packet, apPh.getTimestamp());
+				addPacketToMultimediaSessionList(dsSessions,session, ipV4Packet, apPh.getTimestamp());
+			  }
+			  if (session.checkIsTelegram()) {
+				addPacketToMultimediaSessionList(telegramSessions,session, ipV4Packet, apPh.getTimestamp());
 			  }
 			}
 		  }
@@ -719,27 +760,28 @@ public class Main implements Constants {
 	  
 	}
 
-//        System.out.println(tcpCounter + " tcp packets have been found in " + apPcapFile);
-//        System.out.println(udpCounter + " udp packets have been found in " + apPcapFile);
-	System.out.println("All " + apPacketCounter + " packets have been read from AP file " + apPcapFile);
+//        System.out.println(tcpCounter + " tcp packets were found in " + apPcapFile);
+//        System.out.println(udpCounter + " udp packets were found in " + apPcapFile);
+	System.out.println("All " + apPacketCounter + " packets were read from AP file " + apPcapFile);
 	
 	apPh.close();
 	
   }
   
-  private static void addPacketToDiscordSessionList(Session newSession, IpV4Packet ipV4Packet, Timestamp timestamp) {
+  private static void addPacketToMultimediaSessionList(ArrayList<MultimediaSession>multimediaSessions,
+													   Session newSession, IpV4Packet ipV4Packet, Timestamp timestamp) {
 	MultimediaSession newMultimediaSession = new MultimediaSession(newSession);
-	int sessionsSize = dsSessions.size();
+	int sessionsSize = multimediaSessions.size();
 	//If sessions arraylist is empty
 	if (sessionsSize == 0) {
 	  newMultimediaSession.appendPacket(ipV4Packet, timestamp);
-	  dsSessions.add(newMultimediaSession);
+	  multimediaSessions.add(newMultimediaSession);
 	}
 	//Else check in sessions arraylist
 	else {
 	  for (int i = 0; i < sessionsSize; i++) {
 		//if we have found already existing session
-		MultimediaSession existingSession = dsSessions.get(i);
+		MultimediaSession existingSession = multimediaSessions.get(i);
 		
 		//if new session is already exists
 		if (existingSession.has(newMultimediaSession)) {
@@ -750,7 +792,7 @@ public class Main implements Constants {
 		//All sessions were checked and this packet doesn't belong to any of them
 		if (i == sessionsSize - 1) {
 		  newMultimediaSession.appendPacket(ipV4Packet, timestamp);
-		  dsSessions.add(newMultimediaSession);
+		  multimediaSessions.add(newMultimediaSession);
 		}
 		
 	  }
@@ -758,7 +800,8 @@ public class Main implements Constants {
 	
   }
   
-  private static void addPacketToSessionList(Session newSession, IpV4Packet ipV4Packet, Timestamp timestamp) {
+  private static void addPacketToSessionList(ArrayList<Session>sessions,
+											 Session newSession, IpV4Packet ipV4Packet, Timestamp timestamp) {
 	
 	int sessionsSize = sessions.size();
 	//If sessions arraylist is empty
@@ -826,9 +869,11 @@ public class Main implements Constants {
   
   
   //Write parameters of session to files
-  private static void analyseSession(Session session, String FileForDuration,
-									 String FileForInterval, String FileForLength, String FileForTimedOut) throws IOException {
-	
+  private static void writeSessionParamsToFiles(Session session, String[] fileNames) throws IOException {
+	String FileForDuration = fileNames[0];
+	String FileForInterval = fileNames[1];
+	String FileForLength = fileNames[2];
+	String FileForTimedOut = fileNames[3];
 	
 	//Packet Lengths
 	FileWriter pktLengthsWriter = new FileWriter(FileForLength, APPEND_TO_FILE);
@@ -909,7 +954,7 @@ public class Main implements Constants {
 //            //System.out.println(packet.toString());
 //
 //        }
-//        System.out.println(packetNumber + " packets have been read from " + staPcapFile);
+//        System.out.println(packetNumber + " packets were read from " + staPcapFile);
 //        staPh.close();
 //    }
 //
@@ -991,8 +1036,8 @@ public class Main implements Constants {
 //            }
 //
 //        }
-//        System.out.println(tcpPacketsNum + " tcp packets have been read from " + apPcapFile);
-//        System.out.println(packetNumber + " packets have been read from " + apPcapFile);
+//        System.out.println(tcpPacketsNum + " tcp packets were read from " + apPcapFile);
+//        System.out.println(packetNumber + " packets were read from " + apPcapFile);
 //        apPh.close();
 //
 //    }

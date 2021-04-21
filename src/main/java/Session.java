@@ -39,7 +39,7 @@ public class Session implements Constants {
 	if ((ipToHex(ip1) & TESTBED_MASK) == (TESTBED_HEX_SUBNET & TESTBED_MASK)) {
 	  int intPort2 = Integer.parseInt(port2);
 	  // if it's common port
-	  if (intPort2 >= 0 && intPort2 <= 49151) {
+	  if (intPort2 >= 0 && intPort2 <= 1024) {
 		timeout = TIMEOUT_SHORT;
 	  }
 	} else {
@@ -48,7 +48,7 @@ public class Session implements Constants {
 		
 		int intPort1 = Integer.parseInt(port1);
 		// if it's common port
-		if (intPort1 > 0 && intPort1 < 49151) {
+		if (intPort1 > 0 && intPort1 < 1024) {
 		  timeout = TIMEOUT_SHORT;
 		}
 	  }

@@ -78,8 +78,7 @@ public class MultimediaSession extends Session {
   listPort2.add(port1);
   setPredefinedTimeout(ipV4Packet,port1,port2);
  }
-
-// TODO override methods for discord and may be rename Multimedia
+ 
  
  public boolean has (MultimediaSession session){
   String ip1 = session.getIp1();
@@ -102,7 +101,7 @@ public class MultimediaSession extends Session {
  
  @Override
  public Timestamp getStartTime() {
- 
+  
   //TCP handshake consists of 3 packets: SYN, SYN+ACK and ACK
   //TCP session start time = time of the 3d packet (ACK)
   //if there is was no TCP handshake, then we will take timestamp of the first packet as default.
@@ -186,7 +185,8 @@ public class MultimediaSession extends Session {
    //TCP session ends with FIN
    IpV4Packet ipPkt1 = ipV4Packets.get(i);
    try {
-    TcpPacket tcpPkt1 = TcpPacket.newPacket(ipPkt1.getPayload().getRawData(), 0, ipPkt1.getPayload().length());
+    TcpPacket tcpPkt1 = TcpPacket.
+            newPacket(ipPkt1.getPayload().getRawData(), 0, ipPkt1.getPayload().length());
     if (tcpPkt1.getHeader().getFin()) {
      return true;
     }
