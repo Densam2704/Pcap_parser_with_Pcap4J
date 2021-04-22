@@ -11,8 +11,8 @@ public class Session implements Constants {
   protected String ip1;
   protected String ip2;
   
-  private String port1;
-  private String port2;
+  protected String port1;
+  protected String port2;
   
   protected ArrayList<IpV4Packet> ipV4Packets = new ArrayList<IpV4Packet>();
   protected ArrayList<Timestamp> packetTimestamps = new ArrayList<Timestamp>();

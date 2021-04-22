@@ -143,14 +143,14 @@ public class Main implements Constants {
 	  System.out.println(before+" discord sessions found");
 	  analiseMultimediaSession(dsSessions, dsAnalysisResultFiles, isLastFile);
 	  after=dsSessions.size();
-	  System.out.println(after+" discord left opened\n");
+	  System.out.println(after+" discord sessions left opened\n");
 	  dsTotal+=before-after;
 	  
 	  before=telegramSessions.size();
 	  System.out.println(before+" telegram sessions found");
 	  analiseMultimediaSession(telegramSessions, telegramAnalysisResultFiles, isLastFile);
 	  after=telegramSessions.size();
-	  System.out.println(after+" telegram left opened\n");
+	  System.out.println(after+" telegram left sessions opened\n");
 	  telegTotal+=before-after;
 	  
 	  
@@ -925,9 +925,18 @@ public class Main implements Constants {
 //                        System.out.printf("Session %s:%s %s:%s were finished because of timeout\n",
 //                                session.getIp1(),session.getPort1(),session.getIp2(),session.getPort2());
 //                        System.out.println("Amount of packets in the session: "+session.getIpV4Packets().size());
+	  
+	  String tcpOrUdp="Unknown\t";
+	  if(session.isUDP())
+		tcpOrUdp="UDP\t";
+	  if(session.isTCP())
+		tcpOrUdp="TCP\t";
+	  
 	  FileWriter timedOutWriter = new FileWriter(FileForTimedOut, APPEND_TO_FILE);
-	  timedOutWriter.write(String.format("Session %s:%s %s:%s was finished because of timeout\t",
-			  session.getIp1(), session.getPort1(), session.getIp2(), session.getPort2()));
+	  timedOutWriter.write(String.format("%sSession %s:%s %s:%s was finished because of timeout\t",
+			  tcpOrUdp,session.getIp1(), session.getPort1(), session.getIp2(), session.getPort2()));
+	  timedOutWriter.write(String.format("Timeout value: %f\t",
+			  session.getTimeout()));
 	  timedOutWriter.write(String.format("Amount of packets in the session: %d\t",
 			  session.getIpV4Packets().size()));
 	  timedOutWriter.write(String.format("Session was considered timed out after reading: %s\n",

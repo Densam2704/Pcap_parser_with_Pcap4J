@@ -58,6 +58,8 @@ public class MultimediaSession extends Session {
   
   //We are taking the max timeout for Multimedia sessions
   if(newTimeout>this.timeout){
+   this.port1=port1;
+   this.port2=port2;
    timeout = newTimeout;
    return newTimeout;
   }
@@ -196,6 +198,24 @@ public class MultimediaSession extends Session {
    if (i == breakAfter){
     break;
    }
+  }
+  return false;
+ }
+ 
+ @Override
+ public boolean isTCP() {
+  for(boolean isTcp:listIsTCP){
+   if(isTcp)
+    return true;
+  }
+  return false;
+ }
+ 
+ @Override
+ public boolean isUDP() {
+  for(boolean isUdp:listIsUDP){
+   if(isUdp)
+    return true;
   }
   return false;
  }
