@@ -100,11 +100,6 @@ public class MultimediaSession extends Session {
  
   }
   
-  //This should probably not be overridden
-// @Override
-// public double getSessionDuration() {
-//  return super.getSessionDuration();
-// }
   
   @Override
   public Timestamp getStartTime() {
@@ -203,6 +198,7 @@ public class MultimediaSession extends Session {
 	return false;
   }
   
+  //Returns true if at least 1 packet is TCP
   @Override
   public boolean isTCP() {
 	for (boolean isTcp : listIsTCP) {
@@ -212,6 +208,7 @@ public class MultimediaSession extends Session {
 	return false;
   }
   
+  //Returns true if at least 1 packet is UDP
   @Override
   public boolean isUDP() {
 	for (boolean isUdp : listIsUDP) {

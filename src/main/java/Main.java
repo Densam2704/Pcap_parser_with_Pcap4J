@@ -175,23 +175,11 @@ public class Main implements Constants {
 	  session = sessions.get(j);
 	
 	  boolean isFinished = session.checkIsFinished();
-	  boolean isTooLong = session.checkIsTimedout(lastReadTimestamp);
-//                boolean isDiscord = session.checkIsDiscord();
-//                boolean isTelegram = session.checkIsTelegram();
+	  boolean isTooLong = session.checkIsTimedOut(lastReadTimestamp);
 	  //If the session was finished or if the last added packet was added too long ago
 	  //If this is the last file
 	  if (isFinished || isTooLong || isLastFile) {
 		writeSessionParamsToFiles(session,resultFiles);
-	 
-		//This is an alternate way of getting Multimedia statistics
-//                    if(isDiscord){
-//                        dsNum++;
-//                        analyseSession(session,resultFiles[11],resultFiles[12],resultFiles[13], resultFiles[14]);
-//                    }
-//                    if(isTelegram){
-//                        telegNum++;
-//                        analyseSession(session,resultFiles[15],resultFiles[16],resultFiles[17], resultFiles[18]);
-//                    }
 		finishedSessions.add(session);
 	  
 	  }
@@ -213,7 +201,7 @@ public class Main implements Constants {
 	for (int j = 0; j < dsSize; j++) {
 	  MultimediaSession multimediaSession = multimediaSessions.get(j);
 	  boolean isFinished = multimediaSession.checkIsFinished();
-	  boolean isTooLong = multimediaSession.checkIsTimedout(lastReadTimestamp);
+	  boolean isTooLong = multimediaSession.checkIsTimedOut(lastReadTimestamp);
 	  if (isFinished || isTooLong || isLastFile) {
 		writeSessionParamsToFiles(multimediaSession,resultFiles);
 		finishedSessions.add(multimediaSession);
@@ -232,21 +220,18 @@ public class Main implements Constants {
   public static void getFileList(String filepath, ArrayList<File> fileList, String fileFormat) {
 	
 	File directory = new File(filepath);
-	// get just files, not directories
 	File[] files = directory.listFiles((FileFilter) FileFileFilter.FILE);
 	
 	//sort by last modified (asc order)
 	Arrays.sort(files, LastModifiedFileComparator.LASTMODIFIED_COMPARATOR);
-//        System.out.println("\nLast Modified Ascending Order (LASTMODIFIED_COMPARATOR)");
 	
 	//Add pcap files to array list
 	for (File f : files) {
 	  if (f.getName().endsWith(fileFormat)) {
 		fileList.add(f);
-//                System.out.println(f+" file added to list");
 	  }
-	  
 	}
+	
   }
   
   //1 time delta from previous captured frame. (packets from Station to AP) (Station side)
@@ -272,7 +257,7 @@ public class Main implements Constants {
 	  }
 	  //If packet is from STA with IP 192.0.2.12
 	  if (isFromStation) {
-		double time_delta = getTimeDelta(staPh.getTimestamp(), previousCapturedFrameTime);
+		double time_delta = Session.getTimeDifference(staPh.getTimestamp(), previousCapturedFrameTime);
 //                System.out.println(String.format(packetNumber
 //                        + " \nTime from previous captured frame = %.9f",time_delta));
 		timesWriter.write(String.format("%.9f\n", time_delta).replaceAll(",", "."));
@@ -336,7 +321,7 @@ public class Main implements Constants {
 		  if (wlanSa.equals(STA1_MAC) || wlanSa.equals(STA2_MAC)) {
 //                        System.out.println("THIS IS OUR FRAME");
 			filteredPackets++;
-			double time_delta = getTimeDelta(apPh.getTimestamp(), previousCapturedFrameTime);
+			double time_delta = Session.getTimeDifference(apPh.getTimestamp(), previousCapturedFrameTime);
 //                        System.out.println(String.format(packetNumber
 //                                + " \nTime from previous captured frame = %.9f",time_delta));
 //
@@ -428,7 +413,7 @@ public class Main implements Constants {
 			  System.out.println("t1 nanos = " + apPh.getTimestamp().getNanos());
 			  System.out.println("t2  = " + staPh.getTimestamp().getTime());
 			  System.out.println("t2 nanos = " + staPh.getTimestamp().getNanos());
-			  double delta1 = getTimeDelta(staPh.getTimestamp(), apPh.getTimestamp());
+			  double delta1 = Session.getTimeDifference(staPh.getTimestamp(), apPh.getTimestamp());
 			  System.out.println("delta1 = " + delta1);
 			  
 			  tcpTimeDeltaWriter.write(String.format("%.9f\n", delta1).replaceAll(",", "."));
@@ -516,7 +501,7 @@ public class Main implements Constants {
 			  System.out.println("t1 nanos = " + apPh.getTimestamp().getNanos());
 			  System.out.println("t2  = " + staPh.getTimestamp().getTime());
 			  System.out.println("t2 nanos = " + staPh.getTimestamp().getNanos());
-			  double delta2 = getTimeDelta(staPh.getTimestamp(), apPh.getTimestamp());
+			  double delta2 = Session.getTimeDifference(staPh.getTimestamp(), apPh.getTimestamp());
 			  System.out.println("delta2 = " + delta2);
 			  
 			  tcpTimeDeltaWriter.write(String.format("%.9f\n", delta2).replaceAll(",", "."));
@@ -691,18 +676,20 @@ public class Main implements Constants {
   
   //Parse Radiotap packet to find IP packet
   private static void parseRadiotapPacket(RadiotapPacket radiotapPacket) throws IllegalRawDataException {
+  
 	if (radiotapPacket != null) {
 	  radiotapPayload= radiotapPacket.getPayload().getRawData();
 	  int payloadLength = radiotapPayload.length;
-	  Dot11FrameType type = Dot11FrameType.getInstance(
-			  (byte) (((radiotapPayload[0] << 2) & 0x30) | ((radiotapPayload[0] >> 4) & 0x0F))
+	  Dot11FrameType type = Dot11FrameType
+			  .getInstance((byte) (((radiotapPayload[0] << 2) & 0x30) | ((radiotapPayload[0] >> 4) & 0x0F))
 	  );
 	  //Looking only for  IEEE802.11 data frames in a Type/Subtype field
-	  //that belong to our network
+	  //that belong to Testbed network
 	  if (type.value() == DOT11_DATA && (belongsToTestbed(radiotapPayload))) {
-		//Position of ip and port in Radiotap Payload
+		
 		int ipPos = IPv4_POSITION_IN_RADIOTAP_PAYLOAD;
 		IpV4Packet ipV4Packet = null;
+		
 		try {
 		  ipV4Packet = IpV4Packet.newPacket(radiotapPayload, ipPos, payloadLength - ipPos);
 		  parseIPv4Packet(ipV4Packet);
@@ -710,10 +697,9 @@ public class Main implements Constants {
 		catch (Exception e) {
 //       System.out.println(e.getMessage());
 		}
-		
 	  }
-	
 	}
+	
   }
   
   //Checks radiotap payload
@@ -791,6 +777,7 @@ public class Main implements Constants {
 		default:
 		  break;
 	  }
+	  
 	  //Unless protocol is TCP/UDP/ICMP, go to the next packet.
 	  if (port1.equals(null) || port2.equals((null)) || port1.equals("") || port2.equals("")) {
 //				System.out.println("trouble packet+ "+ apPacketCounter + "\n"+ipV4Packet.toString());
@@ -805,10 +792,12 @@ public class Main implements Constants {
 	  if (session.checkIsDiscord()) {
 		addPacketToMultimediaSessionList(dsSessions,session, ipV4Packet, apPh.getTimestamp());
 	  }
+	  
 	  if (session.checkIsTelegram()) {
 		addPacketToMultimediaSessionList(telegramSessions,session, ipV4Packet, apPh.getTimestamp());
 	  }
 	}
+	
   }
   
   private static void addPacketToSessionList(ArrayList<Session>sessions,
@@ -828,7 +817,7 @@ public class Main implements Constants {
 		
 		//if  existing session has new session parameters and existing session is not finished or timed out
 		if (existingSession.has(newSession) &&
-				!existingSession.checkIsFinished() && !existingSession.checkIsTimedout(lastReadTimestamp)) {
+				!existingSession.checkIsFinished() && !existingSession.checkIsTimedOut(lastReadTimestamp)) {
 		  //add packet to the existing session and break the cycle FOR
 		  existingSession.appendPacket(ipV4Packet, timestamp);
 		  break;
@@ -875,9 +864,6 @@ public class Main implements Constants {
 	
   }
   
-  
-  
-  
   //Write parameters of session to files
   private static void writeSessionParamsToFiles(Session session, String[] fileNames) throws IOException {
 	String FileForDuration = fileNames[0];
@@ -906,7 +892,7 @@ public class Main implements Constants {
 //	System.out.println();
 //	int index=0;
 	for (Timestamp tmstmp : tmstmps) {
-	  Double interval = getTimeDelta(tmstmp, prevPacketTmstmp);
+	  Double interval = Session.getTimeDifference(tmstmp, prevPacketTmstmp);
 	  //TODO for testing
 //	  System.out.print("Start time: " +session.getStartTime() + "\tEnd time: "+session.getEndTime()+"\t");
 //	  System.out.print("Dur = " + session.getSessionDuration()+"\n");
@@ -938,10 +924,8 @@ public class Main implements Constants {
 	}
 	durWriter.close();
 	
-	
-	//For testing
 	//Timed out but not finished sessions
-	if (session.checkIsTimedout(lastReadTimestamp) & !session.checkIsFinished()) {
+	if (session.checkIsTimedOut(lastReadTimestamp) & !session.checkIsFinished()) {
 //                        System.out.printf("Session %s:%s %s:%s were finished because of timeout\n",
 //                                session.getIp1(),session.getPort1(),session.getIp2(),session.getPort2());
 //                        System.out.println("Amount of packets in the session: "+session.getIpV4Packets().size());
@@ -975,26 +959,5 @@ public class Main implements Constants {
 	return sb.toString();
   }
   
-  //Get Time difference (a.k.a. delta) between 2 frames
-  public static Double getTimeDelta(Timestamp time1, Timestamp time2) {
-	double time_delta = 0;
-	
-	//If both timestamps are not null
-	if (time1 != null && time2 != null) {
-	  
-	  int deltaInMs = (int) Math.abs(time2.getTime() - time1.getTime());
-	  //If delta in seconds is > 0 then we should count seconds together with nano seconds
-	  if (deltaInMs / 1000 != 0) {
-		time_delta = deltaInMs / 1000;
-	  }
-	  //If not, then we can simply count delta in nano seconds
-	  int time2Nanos = time2.getNanos();
-	  time_delta += (double) Math.abs(time1.getNanos() - time2Nanos) / 1000000000;
-	  
-	  
-	}
-	return time_delta;
-	
-  }
   
 }

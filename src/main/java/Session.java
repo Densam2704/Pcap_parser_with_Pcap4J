@@ -37,7 +37,7 @@ public class Session implements Constants {
 	
 	//Short timeouts for port-specific sessions
 	//if ip1 in our network then check ip2:port2
-	if ((ipToHex(ip1) & TESTBED_MASK) == (TESTBED_HEX_SUBNET & TESTBED_MASK)) {
+	if (checkIsTestbed(ip1)) {
 	  int intPort2 = Integer.parseInt(port2);
 	  // if it's common port
 	  if (intPort2 >= 0 && intPort2 <= 1024) {
@@ -45,11 +45,11 @@ public class Session implements Constants {
 	  }
 	} else {
 	  //if ip2 in our network then check ip1:port
-	  if ((ipToHex(ip2) & TESTBED_MASK) == (TESTBED_HEX_SUBNET & TESTBED_MASK)) {
+	  if (checkIsTestbed(ip2)) {
 		
 		int intPort1 = Integer.parseInt(port1);
 		// if it's common port
-		if (intPort1 > 0 && intPort1 < 1024) {
+		if (intPort1 >= 0 && intPort1 <= 1024) {
 		  timeout = TIMEOUT_SHORT;
 		}
 	  }
@@ -125,16 +125,16 @@ public class Session implements Constants {
     return false;
   }
   
-  //Checks if last added packet in session is added later than timeout
-  
-  public boolean checkIsTimedout(Timestamp currPktTimestamp) {
+  //Checks time difference between last added packet in session and the current packet timestamp.
+  //If difference > timeout returns true
+  public boolean checkIsTimedOut(Timestamp currPktTimestamp) {
 	
 	int sessionSize = packetTimestamps.size();
 	Timestamp lastTmstmpInSession = packetTimestamps.get(sessionSize - 1);
 
 //        System.out.printf("currPktTimestamp = %s\n",currPktTimestamp.toString());
 //        System.out.printf("lastTmstmpInSession = %s\n",lastTmstmpInSession.toString());
-	Double difference = getTimeDelta(currPktTimestamp, lastTmstmpInSession);
+	Double difference = getTimeDifference(currPktTimestamp, lastTmstmpInSession);
 //        System.out.printf("Session lasts = %.6f\n",difference);
 	if (timeout < 0)
 	  choosePredefinedTimeout(ipV4Packets.get(sessionSize - 1), port1, port2);
@@ -142,7 +142,6 @@ public class Session implements Constants {
   }
   
   //Look for FIN tcp. Returns true if FIN is found.
-  
   public boolean checkIsFinished() {
 	if (!isTCP)
 	  return false;
@@ -168,9 +167,8 @@ public class Session implements Constants {
 	return false;
   }
   
-  //Get Time difference (a.k.a. delta) between 2 timestamps
-  
-  public Double getTimeDelta(Timestamp time1, Timestamp time2) {
+  //Get Time difference in seconds between 2 frames
+  public static Double getTimeDifference(Timestamp time1, Timestamp time2) {
 	double time_delta = 0;
 	
 	//If both timestamps are not null
@@ -199,13 +197,13 @@ public class Session implements Constants {
 	Timestamp end = this.getEndTime();
 	
 	if (start != null && end != null) {
-	  dur = getTimeDelta(start, end);
+	  dur = getTimeDifference(start, end);
 	}
 	return dur;
   }
   
   //get timestamp of start (TCP handshake)
-  
+  //if there is no TCP handshake returns timestamp of first packet in the session
   public Timestamp getStartTime() {
 	//if there is no handshake, then we will take timestamp of the first packet
 	Timestamp timestamp = packetTimestamps.get(0);
@@ -241,7 +239,7 @@ public class Session implements Constants {
 		  }
 		}
 	  } catch (IllegalRawDataException e) {
-		e.printStackTrace();
+//		e.printStackTrace();
 	  }
 	  
 	}
@@ -251,7 +249,7 @@ public class Session implements Constants {
   }
   
   //get timestamp of end (TCP FIN)
-  
+  //if there is no tcp fin returns timestamp of last packet in the session
   public Timestamp getEndTime() {
 	//If there is no FIN, we will take time of the last packet
 	Timestamp timestamp = packetTimestamps.get(packetTimestamps.size() - 1);
@@ -275,7 +273,6 @@ public class Session implements Constants {
   }
   
   //Check if the ip1:port1 ip2:port2 belong to the Session
-  
   public boolean has(String ip1, String port1, String ip2, String port2) {
 	if (this.ip1.equals(ip1) && this.port1.equals(port1) && this.ip2.equals(ip2) && this.port2.equals(port2))
 	  return true;
@@ -283,7 +280,6 @@ public class Session implements Constants {
   }
   
   //Check if the ip1:port1 ip2:port2 belong to the Session
-  
   public boolean has(Session s) {
 	
 	String ip1 = s.getIp1();
@@ -293,7 +289,7 @@ public class Session implements Constants {
 	
 	if (this.ip1.equals(ip1) && this.port1.equals(port1) && this.ip2.equals(ip2) && this.port2.equals(port2))
 	  return true;
-      return this.ip1.equals(ip2) && this.port1.equals(port2) && this.ip2.equals(ip1) && this.port2.equals(port1);
+	return this.ip1.equals(ip2) && this.port1.equals(port2) && this.ip2.equals(ip1) && this.port2.equals(port1);
   }
   
   //Adds packet to the session
