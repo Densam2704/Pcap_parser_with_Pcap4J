@@ -22,6 +22,8 @@ public class Main implements Constants {
   public static ArrayList<MultimediaSession> telegramSessions = new ArrayList<>();
   public static String staPcapFile;
   public static String apPcapFile;
+  public static PcapHandle apPh;
+  public static byte[] radiotapPayload;
   public static ArrayList<File> apFiles = new ArrayList<>();
   public static ArrayList<File> staFiles = new ArrayList<>();
   public static Timestamp lastReadTimestamp = null;
@@ -172,7 +174,6 @@ public class Main implements Constants {
 	for (int j = 0; j < sessionSize; j++) {
 	  session = sessions.get(j);
 	
-	
 	  boolean isFinished = session.checkIsFinished();
 	  boolean isTooLong = session.checkIsTimedout(lastReadTimestamp);
 //                boolean isDiscord = session.checkIsDiscord();
@@ -291,7 +292,7 @@ public class Main implements Constants {
   
   //packet time delta from previous captured frame (Station to Access Point) (AP side)
   private static void find_2() throws PcapNativeException, NotOpenException, IOException {
-	PcapHandle apPh = Pcaps.openOffline(apPcapFile, PcapHandle.TimestampPrecision.NANO);
+	apPh = Pcaps.openOffline(apPcapFile, PcapHandle.TimestampPrecision.NANO);
 	
 	FileWriter timesWriter = new FileWriter(resultFiles[2], false);
 	FileWriter packetLengthWriter = new FileWriter(resultFiles[3], false);
@@ -664,12 +665,9 @@ public class Main implements Constants {
   //Find all sessions in apPcapFile
   private static void readFileAndFindSessions() throws PcapNativeException, NotOpenException, IOException {
 	
-	PcapHandle apPh = Pcaps.openOffline(apPcapFile);
+    apPh = Pcaps.openOffline(apPcapFile);
 	
 	int apPacketCounter = 0;
-	//for testing purposes
-	int tcpCounter = 0;
-	int udpCounter = 0;
 	Packet packet = null;
 	
 	while ((packet = apPh.getNextPacket()) != null) {
@@ -677,127 +675,140 @@ public class Main implements Constants {
 	  lastReadTimestamp = apPh.getTimestamp();
 	  RadiotapPacket radiotapPacket = packet.get(RadiotapPacket.class);
 	  try {
-		if (radiotapPacket != null) {
-		  byte[] payload = radiotapPacket.getPayload().getRawData();
-		  int payloadLength = payload.length;
-		  
-		  Dot11FrameType type = Dot11FrameType.getInstance(
-				  (byte) (((payload[0] << 2) & 0x30) | ((payload[0] >> 4) & 0x0F))
-		  );
-		  //Looking only for  IEEE802.11 data frames in a Type/Subtype field
-		  //that belong to our network
-		  if (type.value() == DOT11_DATA && (belongsToTestbed(payload))) {
-			//Position of ip and port in Radiotap Payload
-			int ipPos = 40;
-			int portPos = ipPos + 20;
-			IpV4Packet ipV4Packet = null;
-			try {
-			  ipV4Packet = IpV4Packet.newPacket(payload, ipPos, payloadLength - ipPos);
-			} catch (Exception e) {
-//                                    System.out.println(e.getMessage());
-			}
-			
-			
-			// if ip packet is not null
-			if (ipV4Packet != null) {
-			  String ip1 = "", ip2 = "", port1 = "", port2 = "";
-			  boolean isTcp = false, isUdp = false;
-			  
-			  ip1 = ipV4Packet.getHeader().getSrcAddr().getHostAddress();
-			  ip2 = ipV4Packet.getHeader().getDstAddr().getHostAddress();
-			  
-			  int protocol = Integer.parseInt(ipV4Packet.getHeader().getProtocol().valueAsString());
-			  
-			  switch (protocol) {
-				case UDP_INT:
-				  udpCounter++;
-				  UdpPacket udpPacket = UdpPacket.newPacket(payload, portPos, payloadLength - portPos);
-				  port1 = String.valueOf(udpPacket.getHeader().getSrcPort().valueAsInt());
-				  port2 = String.valueOf(udpPacket.getHeader().getDstPort().valueAsInt());
-				  break;
-				case TCP_INT:
-				  tcpCounter++;
-				  TcpPacket tcpPacket = TcpPacket.newPacket(payload, portPos, payloadLength - portPos);
-				  port1 = String.valueOf(tcpPacket.getHeader().getSrcPort().valueAsInt());
-				  port2 = String.valueOf(tcpPacket.getHeader().getDstPort().valueAsInt());
-				  break;
-				case ICMPv4_INT:
-				  //ICMPv4 contains UDP, so we count it as UDP
-				  udpCounter++;
-				  //Position of UDP in ICMPv4 protocol
-				  portPos = ipPos + 8 + 20;
-				  udpPacket = UdpPacket.newPacket(payload, portPos, payloadLength - portPos);
-				  port1 = String.valueOf(udpPacket.getHeader().getSrcPort().valueAsInt());
-				  port2 = String.valueOf(udpPacket.getHeader().getDstPort().valueAsInt());
-				  break;
-				default:
-				  break;
-			  }
-			  //Unless protocol is TCP/UDP/ICMP, go to the next packet.
-			  if (port1.equals(null) || port2.equals((null)) || port1.equals("") || port2.equals("")) {
-//				System.out.println("trouble packet+ "+ apPacketCounter + "\n"+ipV4Packet.toString());
-				continue;
-			  }
-			  
-			  //Add packet to session arraylist.
-			  Session session = new Session(ip1, port1, ip2, port2);
-			  addPacketToSessionList(sessions,session, ipV4Packet, apPh.getTimestamp());
-			  
-			  //Add packet to Multimedia lists
-			  if (session.checkIsDiscord()) {
-				addPacketToMultimediaSessionList(dsSessions,session, ipV4Packet, apPh.getTimestamp());
-			  }
-			  if (session.checkIsTelegram()) {
-				addPacketToMultimediaSessionList(telegramSessions,session, ipV4Packet, apPh.getTimestamp());
-			  }
-			}
-		  }
-		  
-		}
-	  } catch (Exception e) {
-//                System.out.println(" Exception in find_sessions: " +e.getMessage());
+	    parseRadiotapPacket(radiotapPacket);
+	  }
+	  catch (Exception e) {
+	    continue;
+//     System.out.println(" Exception in find_sessions: " +e.getMessage());
 	  }
 	  
 	}
-
-//        System.out.println(tcpCounter + " tcp packets were found in " + apPcapFile);
-//        System.out.println(udpCounter + " udp packets were found in " + apPcapFile);
 	System.out.println("All " + apPacketCounter + " packets were read from AP file " + apPcapFile);
 	
 	apPh.close();
 	
   }
   
-  private static void addPacketToMultimediaSessionList(ArrayList<MultimediaSession>multimediaSessions,
-													   Session newSession, IpV4Packet ipV4Packet, Timestamp timestamp) {
-	MultimediaSession newMultimediaSession = new MultimediaSession(newSession);
-	int sessionsSize = multimediaSessions.size();
-	//If sessions arraylist is empty
-	if (sessionsSize == 0) {
-	  newMultimediaSession.appendPacket(ipV4Packet, timestamp);
-	  multimediaSessions.add(newMultimediaSession);
-	}
-	//Else check in sessions arraylist
-	else {
-	  for (int i = 0; i < sessionsSize; i++) {
-		//if we have found already existing session
-		MultimediaSession existingSession = multimediaSessions.get(i);
-		
-		//if existing session is not finished and existing session has the same session parameters
-		if (existingSession.has(newMultimediaSession) && !existingSession.checkIsFinished()) {
-		  //add packet to the existing session and break the cycle FOR
-		  existingSession.appendPacket(ipV4Packet, timestamp);
-		  break;
+  //Parse Radiotap packet to find IP packet
+  private static void parseRadiotapPacket(RadiotapPacket radiotapPacket) throws IllegalRawDataException {
+	if (radiotapPacket != null) {
+	  radiotapPayload= radiotapPacket.getPayload().getRawData();
+	  int payloadLength = radiotapPayload.length;
+	  Dot11FrameType type = Dot11FrameType.getInstance(
+			  (byte) (((radiotapPayload[0] << 2) & 0x30) | ((radiotapPayload[0] >> 4) & 0x0F))
+	  );
+	  //Looking only for  IEEE802.11 data frames in a Type/Subtype field
+	  //that belong to our network
+	  if (type.value() == DOT11_DATA && (belongsToTestbed(radiotapPayload))) {
+		//Position of ip and port in Radiotap Payload
+		int ipPos = IPv4_POSITION_IN_RADIOTAP_PAYLOAD;
+		IpV4Packet ipV4Packet = null;
+		try {
+		  ipV4Packet = IpV4Packet.newPacket(radiotapPayload, ipPos, payloadLength - ipPos);
+		  parseIPv4Packet(ipV4Packet);
 		}
-		//All sessions were checked and this packet doesn't belong to any of them
-		if (i == sessionsSize - 1) {
-		  newMultimediaSession.appendPacket(ipV4Packet, timestamp);
-		  multimediaSessions.add(newMultimediaSession);
+		catch (Exception e) {
+//       System.out.println(e.getMessage());
 		}
 		
 	  }
+	
+	}
+  }
+  
+  //Checks radiotap payload
+  //Returns true if wlan addresses contain testbed MACs
+  private static boolean belongsToTestbed(byte[] payload) {
+	//Standard MAC length
+	short wlanAddrLen = 6;
+	//Destination address position in payload
+	short wlanDaPos = 4;
+	//Source address position in payload in case of 3 addresses used in WLAN frame
+	short wlanSaPos = 10;
+	
+	//There is a case when source address is a 4th address in a WLAN frame
+	if (payload[0] == 0x08 && payload[1] == 0x42) {
+	  wlanSaPos = 16;
 	}
 	
+	byte[] byteWlanSa = new byte[wlanAddrLen];
+	System.arraycopy(payload, wlanSaPos, byteWlanSa, 0, wlanAddrLen);
+	String wlanSa = byteArrToHexStr(byteWlanSa);
+	
+	byte[] byteWlanDa = new byte[wlanAddrLen];
+	System.arraycopy(payload, wlanDaPos, byteWlanDa, 0, wlanAddrLen);
+	String wlanDa = byteArrToHexStr(byteWlanDa);
+	
+	//If SA and DA in both AP and STA are equal and
+	//If checksums in both AP and STA packets are equal
+	//then we have found exactly the same packet
+	//in AP file. And we can take timestamp from this packet
+	
+	// If traffic belongs to our STAs or to our AP
+	return (wlanDa.equals(STA1_MAC) || wlanDa.equals(STA2_MAC))
+			&& wlanSa.equals(AP_MAC)
+			||
+			wlanDa.equals(AP_MAC) &&
+					(wlanSa.equals(STA1_MAC) || wlanSa.equals(STA2_MAC));
+  }
+  
+  //Parse IPv4Packet to find sessions
+  private static void parseIPv4Packet(IpV4Packet ipV4Packet) throws IllegalRawDataException {
+	// if ip packet is not null
+	if (ipV4Packet != null) {
+	  int portPos = PORT_NUMBER_POSITION_IN_RADIOTAP_PAYLOAD;
+	  int ipPos = IPv4_POSITION_IN_RADIOTAP_PAYLOAD;
+	  String ip1 = "", ip2 = "", port1 = "", port2 = "";
+	  int payloadLength=radiotapPayload.length;
+	
+	  ip1 = ipV4Packet.getHeader().getSrcAddr().getHostAddress();
+	  ip2 = ipV4Packet.getHeader().getDstAddr().getHostAddress();
+	
+	  int protocol = Integer.parseInt(ipV4Packet.getHeader().getProtocol().valueAsString());
+	
+	  switch (protocol) {
+		case UDP_INT:
+//			  udpCounter++;
+		  UdpPacket udpPacket = UdpPacket.newPacket(radiotapPayload, portPos, payloadLength - portPos);
+		  port1 = String.valueOf(udpPacket.getHeader().getSrcPort().valueAsInt());
+		  port2 = String.valueOf(udpPacket.getHeader().getDstPort().valueAsInt());
+		  break;
+		case TCP_INT:
+//			  tcpCounter++;
+		  TcpPacket tcpPacket = TcpPacket.newPacket(radiotapPayload, portPos, payloadLength - portPos);
+		  port1 = String.valueOf(tcpPacket.getHeader().getSrcPort().valueAsInt());
+		  port2 = String.valueOf(tcpPacket.getHeader().getDstPort().valueAsInt());
+		  break;
+		case ICMPv4_INT:
+		  //ICMPv4 contains UDP, so we count it as UDP
+//			  udpCounter++;
+		  //Position of UDP in ICMPv4 protocol
+		  portPos = ipPos + 8 + 20;
+		  udpPacket = UdpPacket.newPacket(radiotapPayload, portPos, payloadLength - portPos);
+		  port1 = String.valueOf(udpPacket.getHeader().getSrcPort().valueAsInt());
+		  port2 = String.valueOf(udpPacket.getHeader().getDstPort().valueAsInt());
+		  break;
+		default:
+		  break;
+	  }
+	  //Unless protocol is TCP/UDP/ICMP, go to the next packet.
+	  if (port1.equals(null) || port2.equals((null)) || port1.equals("") || port2.equals("")) {
+//				System.out.println("trouble packet+ "+ apPacketCounter + "\n"+ipV4Packet.toString());
+		return;
+	  }
+	  
+	  //Add packet to session arraylist.
+	  Session session = new Session(ip1, port1, ip2, port2);
+	  addPacketToSessionList(sessions,session, ipV4Packet, apPh.getTimestamp());
+	
+	  //Add packet to Multimedia lists
+	  if (session.checkIsDiscord()) {
+		addPacketToMultimediaSessionList(dsSessions,session, ipV4Packet, apPh.getTimestamp());
+	  }
+	  if (session.checkIsTelegram()) {
+		addPacketToMultimediaSessionList(telegramSessions,session, ipV4Packet, apPh.getTimestamp());
+	  }
+	}
   }
   
   private static void addPacketToSessionList(ArrayList<Session>sessions,
@@ -832,41 +843,39 @@ public class Main implements Constants {
 	}
   }
   
-  //Checks radiotap payload
-  //Returns true if wlan addresses contain testbed MACs
-  private static boolean belongsToTestbed(byte[] payload) {
-	//Standard MAC length
-	short wlanAddrLen = 6;
-	//Destination address position in payload
-	short wlanDaPos = 4;
-	//Source address position in payload in case of 3 addresses used in WLAN frame
-	short wlanSaPos = 10;
-	
-	//There is a case when source address is a 4th address in a WLAN frame
-	if (payload[0] == 0x08 && payload[1] == 0x42) {
-	  wlanSaPos = 16;
+  private static void addPacketToMultimediaSessionList(ArrayList<MultimediaSession>multimediaSessions,
+													   Session newSession, IpV4Packet ipV4Packet, Timestamp timestamp) {
+	MultimediaSession newMultimediaSession = new MultimediaSession(newSession);
+	int sessionsSize = multimediaSessions.size();
+	//If sessions arraylist is empty
+	if (sessionsSize == 0) {
+	  newMultimediaSession.appendPacket(ipV4Packet, timestamp);
+	  multimediaSessions.add(newMultimediaSession);
+	}
+	//Else check in sessions arraylist
+	else {
+	  for (int i = 0; i < sessionsSize; i++) {
+		//if we have found already existing session
+		MultimediaSession existingSession = multimediaSessions.get(i);
+		
+		//if existing session is not finished and existing session has the same session parameters
+		if (existingSession.has(newMultimediaSession) && !existingSession.checkIsFinished()) {
+		  //add packet to the existing session and break the cycle FOR
+		  existingSession.appendPacket(ipV4Packet, timestamp);
+		  break;
+		}
+		//All sessions were checked and this packet doesn't belong to any of them
+		if (i == sessionsSize - 1) {
+		  newMultimediaSession.appendPacket(ipV4Packet, timestamp);
+		  multimediaSessions.add(newMultimediaSession);
+		}
+		
+	  }
 	}
 	
-	byte[] byteWlanSa = new byte[wlanAddrLen];
-	System.arraycopy(payload, wlanSaPos, byteWlanSa, 0, wlanAddrLen);
-	String wlanSa = byteArrToHexStr(byteWlanSa);
-	
-	byte[] byteWlanDa = new byte[wlanAddrLen];
-	System.arraycopy(payload, wlanDaPos, byteWlanDa, 0, wlanAddrLen);
-	String wlanDa = byteArrToHexStr(byteWlanDa);
-	
-	//If SA and DA in both AP and STA are equal and
-	//If checksums in both AP and STA packets are equal
-	//then we have found exactly the same packet
-	//in AP file. And we can take timestamp from this packet
-	
-	// If traffic belongs to our STAs or to our AP
-      return (wlanDa.equals(STA1_MAC) || wlanDa.equals(STA2_MAC))
-              && wlanSa.equals(AP_MAC)
-              ||
-              wlanDa.equals(AP_MAC) &&
-                      (wlanSa.equals(STA1_MAC) || wlanSa.equals(STA2_MAC));
   }
+  
+  
   
   
   //Write parameters of session to files
@@ -956,111 +965,6 @@ public class Main implements Constants {
 	}
 	
   }
-  
-  //sample. TODO Delete it. When I finish the program
-//    private static void readStaPcap(String staPcapFile) throws PcapNativeException, NotOpenException {
-//        PcapHandle staPh = Pcaps.openOffline(staPcapFile, PcapHandle.TimestampPrecision.NANO);
-//        // PcapManager staPcapManager = new PcapManager(staPcapFile,STATION);
-//
-//        //ArrayList<Packet> packets = new ArrayList<>();
-//
-//        int packetNumber = 0;
-//        Packet packet = null;
-//        while ((packet = staPh.getNextPacket()) != null) {
-//            //packets.add(packet);
-//            packetNumber++;
-//            System.out.println("Packet "+packetNumber);
-//            // System.out.println("Time:\n"+staPcapManager.getArrivalTime(staPh));
-//            //System.out.println(packet.toString());
-//
-//        }
-//        System.out.println(packetNumber + " packets were read from " + staPcapFile);
-//        staPh.close();
-//    }
-//
-//    //sample. TODO Delete it. When I finish the program
-//    private static void readApPcap (String apPcapFile) throws NotOpenException, PcapNativeException, EOFException,
-//            TimeoutException {
-//        PcapHandle apPh = Pcaps.openOffline(apPcapFile, PcapHandle.TimestampPrecision.NANO);
-//
-//
-//        //ArrayList<Packet> packets = new ArrayList<>();
-//
-//        int packetNumber = 0;
-//        int tcpPacketsNum=0;
-//        Packet packet = null;
-//        //apPh.setFilter("src host 192.0.2.12", BpfProgram.BpfCompileMode.NONOPTIMIZE);
-//        while ((packet=apPh.getNextPacket()) != null) {
-//            //packets.add(packet);
-//            packetNumber++;
-//
-////            System.out.println("Packet "+packetNumber);
-////            System.out.println("TSFT:\n"+apPcapManager.getTSFT(packet));
-////            System.out.println(packet.toString());
-//
-//            RadiotapPacket radiotapPacket = packet.get(RadiotapPacket.class);
-//            try {
-//                if(radiotapPacket!=null){
-////                    System.out.println("Получен radiotap");
-////                    System.out.println(radiotapPacket.toString());
-//                    byte[] payload = radiotapPacket.getPayload().getRawData();
-//                    Dot11FrameType type = Dot11FrameType.getInstance(
-//                            (byte) (((payload[0] << 2) & 0x30) | ((payload[0] >> 4) & 0x0F))
-//                    );
-//                    //Смотрим IEEE802.11 Type/Subtipe
-//                    switch (type.value()) {
-//                        case 0: // assoc-req
-//                            System.out.println("assoc-req");
-//                            break;
-//                        case 0x0020:
-//                            //IEEE802.11 data frames
-//                            System.out.println("Wlan data frame");
-//                            //Пропускаем поля IEEE802.11, которые для типа кадра Data занимают 32 байта
-//                            //Пример как побайтово читать пакет
-////                            int payload2Length=payload.length-32;
-////                            byte[]payload2= new byte[payload.length-32];
-////                            System.arraycopy(payload,32,payload2,0,payload2Length);
-////                            System.out.println( byteArrayToHex( payload2));
-//                            int wlanAddrLen = 6;
-//
-//                            byte[]wlanDA = new byte [wlanAddrLen];
-//                            System.arraycopy(payload,16,wlanDA,0,wlanAddrLen);
-//                            System.out.println("wlan destination address: " + byteArrToHexStr(wlanDA));
-//
-//                            byte[]wlanSA = new byte [wlanAddrLen];
-//                            System.arraycopy(payload,10,wlanSA,0,wlanAddrLen);
-//                            System.out.println("wlan source address: " + byteArrToHexStr(wlanSA));
-//                            System.out.println("payload: "+ byteArrToHexStr(payload));
-//                            //System.out.println("Payload [49]" +byteArrayToHex(Arrays.copyOfRange(payload,49,payload.length)));
-//
-//
-//                            byte[]checksumTCP = new byte[]{0x0,0x0};
-//                            //if  IPv4 and IPv4 protocol field == TCP
-//                            if (payload[40]==0x45 && payload[49]==0x06){
-//                                //System.out.println("Packet "+packetNumber);
-//                                tcpPacketsNum++;
-//                                System.arraycopy(payload,76,checksumTCP,0,2);
-//                                System.out.println("TCP Checksum " + byteArrToHexStr(checksumTCP));
-//                            }
-//
-//                            break;
-//                        default:
-////                            System.out.println("Not handling frame type  "+ type.value());
-////                            System.out.println("Type: "+ type.value()+", Header: "+
-////                                    radiotapPacket.getHeader().getRawData().length+
-////                                    "bytes, Payload: length  "+payload.length);
-//                    }
-//                }
-//            }catch (Exception e){
-//
-//            }
-//
-//        }
-//        System.out.println(tcpPacketsNum + " tcp packets were read from " + apPcapFile);
-//        System.out.println(packetNumber + " packets were read from " + apPcapFile);
-//        apPh.close();
-//
-//    }
   
   //Convert byte array to string. See more:
   //https://stackoverflow.com/questions/9655181/how-to-convert-a-byte-array-to-a-hex-string-in-java

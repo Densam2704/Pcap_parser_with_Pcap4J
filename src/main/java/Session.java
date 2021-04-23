@@ -328,6 +328,11 @@ public class Session implements Constants {
       return packet.getHeader().getProtocol().toString().equals(ICMPv4_STRING);
   }
   
+  @Override
+  public String toString() {
+    String res = String.format("%s:%s\t%s:%s\t",ip1,port1,ip2,port2);
+	return res;
+  }
   
   // Constructors
   
