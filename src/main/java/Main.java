@@ -663,7 +663,6 @@ public class Main implements Constants {
 	    parseRadiotapPacket(radiotapPacket);
 	  }
 	  catch (Exception e) {
-	    continue;
 //     System.out.println(" Exception in find_sessions: " +e.getMessage());
 	  }
 	  
