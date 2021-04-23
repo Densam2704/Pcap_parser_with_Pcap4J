@@ -21,10 +21,19 @@ public class MultimediaSession extends Session {
  }
  
  public MultimediaSession(Session s){
-  this.ip1=s.getIp1();
-  this.ip2=s.getIp2();
-  this.listPort1.add(s.getPort1());
-  this.listPort2.add(s.getPort2());
+  //So that we could have ip1:port1 in Testbed network
+  if(checkIsTestbed(ip1)){
+   this.ip1=s.getIp1();
+   this.ip2=s.getIp2();
+   this.listPort1.add(s.getPort1());
+   this.listPort2.add(s.getPort2());
+  }
+  else {
+   this.ip1=s.getIp2();
+   this.ip2=s.getIp1();
+   this.listPort1.add(s.getPort2());
+   this.listPort2.add(s.getPort1());
+  }
   
  }
  

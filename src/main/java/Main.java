@@ -67,7 +67,7 @@ public class Main implements Constants {
 	resultFnames[5] = "";
 	resultFnames[6] = "";
 	
-	resultFnames[7] = "tcp session duration";
+	resultFnames[7] = "session duration";
 	resultFnames[8] = "packet intervals in sessions";
 	resultFnames[9] = "packet lengths in sessions";
 	resultFnames[10] = "timed out sessions";
@@ -138,7 +138,7 @@ public class Main implements Constants {
 	  after=sessions.size();
 	  System.out.println(after + " sessions are left opened \n");
 	  sessionsTotal+=before-after;
-	  
+
 	  before=dsSessions.size();
 	  System.out.println(before+" discord sessions found");
 	  analiseMultimediaSession(dsSessions, dsAnalysisResultFiles, isLastFile);
@@ -150,13 +150,13 @@ public class Main implements Constants {
 	  System.out.println(before+" telegram sessions found");
 	  analiseMultimediaSession(telegramSessions, telegramAnalysisResultFiles, isLastFile);
 	  after=telegramSessions.size();
-	  System.out.println(after+" telegram left sessions opened\n");
+	  System.out.println(after+" telegram sessions left opened\n");
 	  telegTotal+=before-after;
 	  
 	  
-	  System.out.println(" Sessions total number: " + sessionsTotal);
-	  System.out.println(" discord sessions total number: " + dsTotal);
-	  System.out.println(" telegram sessions total number: " + telegTotal);
+	  System.out.println("Sessions total number: " + sessionsTotal);
+	  System.out.println("discord sessions total number: " + dsTotal);
+	  System.out.println("telegram sessions total number: " + telegTotal);
 	
 	}
   }
@@ -174,7 +174,7 @@ public class Main implements Constants {
 	
 	
 	  boolean isFinished = session.checkIsFinished();
-	  boolean isTooLong = session.checkIsTooLong(lastReadTimestamp);
+	  boolean isTooLong = session.checkIsTimedout(lastReadTimestamp);
 //                boolean isDiscord = session.checkIsDiscord();
 //                boolean isTelegram = session.checkIsTelegram();
 	  //If the session was finished or if the last added packet was added too long ago
@@ -212,7 +212,7 @@ public class Main implements Constants {
 	for (int j = 0; j < dsSize; j++) {
 	  MultimediaSession multimediaSession = multimediaSessions.get(j);
 	  boolean isFinished = multimediaSession.checkIsFinished();
-	  boolean isTooLong = multimediaSession.checkIsTooLong(lastReadTimestamp);
+	  boolean isTooLong = multimediaSession.checkIsTimedout(lastReadTimestamp);
 	  if (isFinished || isTooLong || isLastFile) {
 		writeSessionParamsToFiles(multimediaSession,resultFiles);
 		finishedSessions.add(multimediaSession);
@@ -783,8 +783,8 @@ public class Main implements Constants {
 		//if we have found already existing session
 		MultimediaSession existingSession = multimediaSessions.get(i);
 		
-		//if new session is already exists
-		if (existingSession.has(newMultimediaSession)) {
+		//if existing session is not finished and existing session has the same session parameters
+		if (existingSession.has(newMultimediaSession) && !existingSession.checkIsFinished()) {
 		  //add packet to the existing session and break the cycle FOR
 		  existingSession.appendPacket(ipV4Packet, timestamp);
 		  break;
@@ -815,8 +815,9 @@ public class Main implements Constants {
 		//if we have found already existing session
 		Session existingSession = sessions.get(i);
 		
-		//if new session is already exists
-		if (existingSession.has(newSession)) {
+		//if  existing session has new session parameters and existing session is not finished or timed out
+		if (existingSession.has(newSession) &&
+				!existingSession.checkIsFinished() && !existingSession.checkIsTimedout(lastReadTimestamp)) {
 		  //add packet to the existing session and break the cycle FOR
 		  existingSession.appendPacket(ipV4Packet, timestamp);
 		  break;
@@ -891,11 +892,21 @@ public class Main implements Constants {
 	FileWriter intervalWriter = new FileWriter(FileForInterval, APPEND_TO_FILE);
 	Timestamp prevPacketTmstmp = null;
 	ArrayList<Timestamp> tmstmps = session.getPacketTimestamps();
+ 
+	//TODO for testing
+//	System.out.println();
+//	int index=0;
 	for (Timestamp tmstmp : tmstmps) {
 	  Double interval = getTimeDelta(tmstmp, prevPacketTmstmp);
-	  prevPacketTmstmp = tmstmp;
-//                    System.out.println("interval " + String.format("%.9f",interval).replaceAll(",", "."));
+	  //TODO for testing
+//	  System.out.print("Start time: " +session.getStartTime() + "\tEnd time: "+session.getEndTime()+"\t");
+//	  System.out.print("Dur = " + session.getSessionDuration()+"\n");
+//	  System.out.print(tmstmp+"\t"+prevPacketTmstmp+"\t");
+//	  System.out.println("interval " + String.format("%.9f",interval).replaceAll(",", "."));
+//	  System.out.println(session.getIpV4Packets().get(index++).toString());
+	  
 	  intervalWriter.write(String.format("%.9f\n", interval).replaceAll(",", "."));
+	  prevPacketTmstmp = tmstmp;
 	}
 	//Splitter between sessions
 	intervalWriter.write("\n");
@@ -921,7 +932,7 @@ public class Main implements Constants {
 	
 	//For testing
 	//Timed out but not finished sessions
-	if (session.checkIsTooLong(lastReadTimestamp) & !session.checkIsFinished()) {
+	if (session.checkIsTimedout(lastReadTimestamp) & !session.checkIsFinished()) {
 //                        System.out.printf("Session %s:%s %s:%s were finished because of timeout\n",
 //                                session.getIp1(),session.getPort1(),session.getIp2(),session.getPort2());
 //                        System.out.println("Amount of packets in the session: "+session.getIpV4Packets().size());
