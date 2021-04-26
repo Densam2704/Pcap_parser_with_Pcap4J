@@ -155,8 +155,10 @@ public class Session implements Constants {
 	  try {
 		TcpPacket tcpPkt1 = TcpPacket.newPacket(ipPkt1.getPayload().getRawData(), 0, ipPkt1.getPayload().length());
 		if (tcpPkt1.getHeader().getFin()) {
+//		  System.out.println("GOT FIN in"+this.toString());
 		  return true;
 		}
+		
 	  } catch (IllegalRawDataException e) {
 		e.printStackTrace();
 	  }
@@ -164,6 +166,7 @@ public class Session implements Constants {
 		break;
 	  }
 	}
+//	System.out.println("Did not get FIN in "+this.toString());
 	return false;
   }
   

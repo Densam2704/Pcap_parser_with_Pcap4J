@@ -24,6 +24,7 @@ public class Main implements Constants {
   public static String apPcapFile;
   public static PcapHandle apPh;
   public static byte[] radiotapPayload;
+  public static boolean isLastApFile = false;
   public static ArrayList<File> apFiles = new ArrayList<>();
   public static ArrayList<File> staFiles = new ArrayList<>();
   public static Timestamp lastReadTimestamp = null;
@@ -72,7 +73,7 @@ public class Main implements Constants {
 	resultFnames[7] = "session duration";
 	resultFnames[8] = "packet intervals in sessions";
 	resultFnames[9] = "packet lengths in sessions";
-	resultFnames[10] = "timed out sessions";
+	resultFnames[10] = "finished sessions";
 	
 	resultFnames[11] = "discord " + resultFnames[7];
 	resultFnames[12] = "discord " + resultFnames[8];
@@ -114,8 +115,8 @@ public class Main implements Constants {
   
 	int fNum = 0;
 	int sessionsTotal = 0;
-	int dsTotal = 0;
-	int telegTotal = 0;
+	int discordTotal = 0;
+	int telegramTotal = 0;
 	int sizeApFiles = apFiles.size();
 	String[] analysisResultFiles = Arrays.copyOfRange(resultFiles, 7, 11);
 	String[] dsAnalysisResultFiles = Arrays.copyOfRange(resultFiles, 11, 15);
@@ -127,43 +128,43 @@ public class Main implements Constants {
 	  apPcapFile = AP_DUMP_PATH + "\\" + apFiles.get(i).getName();
 	  readFileAndFindSessions();
 	
-	  boolean isLastFile = false;
+	  
 	  if (i == sizeApFiles - 1) {
-		isLastFile = true;
+		isLastApFile = true;
 	  }
 	  
 	  int before=0,after=0;
 	  
 	  before=sessions.size();
 	  System.out.println(before + " sessions are found ");
-	  analiseSession(sessions, analysisResultFiles, isLastFile);
+	  analiseSession(sessions, analysisResultFiles);
 	  after=sessions.size();
 	  System.out.println(after + " sessions are left opened \n");
 	  sessionsTotal+=before-after;
 
 	  before=dsSessions.size();
 	  System.out.println(before+" discord sessions found");
-	  analiseMultimediaSession(dsSessions, dsAnalysisResultFiles, isLastFile);
+	  analiseMultimediaSession(dsSessions, dsAnalysisResultFiles);
 	  after=dsSessions.size();
 	  System.out.println(after+" discord sessions left opened\n");
-	  dsTotal+=before-after;
+	  discordTotal+=before-after;
 	  
 	  before=telegramSessions.size();
 	  System.out.println(before+" telegram sessions found");
-	  analiseMultimediaSession(telegramSessions, telegramAnalysisResultFiles, isLastFile);
+	  analiseMultimediaSession(telegramSessions, telegramAnalysisResultFiles);
 	  after=telegramSessions.size();
 	  System.out.println(after+" telegram sessions left opened\n");
-	  telegTotal+=before-after;
+	  telegramTotal+=before-after;
 	  
 	  
 	  System.out.println("Sessions total number: " + sessionsTotal);
-	  System.out.println("discord sessions total number: " + dsTotal);
-	  System.out.println("telegram sessions total number: " + telegTotal);
+	  System.out.println("discord sessions total number: " + discordTotal);
+	  System.out.println("telegram sessions total number: " + telegramTotal);
 	
 	}
   }
   
-  private static void analiseSession(ArrayList<Session>sessions,String[]resultFiles,boolean isLastFile)
+  private static void analiseSession(ArrayList<Session>sessions,String[]resultFiles)
 		  throws IOException {
   
 	int sessionSize = sessions.size();
@@ -178,7 +179,7 @@ public class Main implements Constants {
 	  boolean isTooLong = session.checkIsTimedOut(lastReadTimestamp);
 	  //If the session was finished or if the last added packet was added too long ago
 	  //If this is the last file
-	  if (isFinished || isTooLong || isLastFile) {
+	  if (isFinished || isTooLong || isLastApFile) {
 		writeSessionParamsToFiles(session,resultFiles);
 		finishedSessions.add(session);
 	  
@@ -193,8 +194,8 @@ public class Main implements Constants {
   }
   
   
-  private static void analiseMultimediaSession(ArrayList<MultimediaSession> multimediaSessions, String[] resultFiles,
-											   boolean isLastFile) throws IOException {
+  private static void analiseMultimediaSession(ArrayList<MultimediaSession> multimediaSessions, String[] resultFiles
+											   ) throws IOException {
 	ArrayList<MultimediaSession>finishedSessions = new ArrayList<>();
  
 	int dsSize = multimediaSessions.size();
@@ -202,7 +203,7 @@ public class Main implements Constants {
 	  MultimediaSession multimediaSession = multimediaSessions.get(j);
 	  boolean isFinished = multimediaSession.checkIsFinished();
 	  boolean isTooLong = multimediaSession.checkIsTimedOut(lastReadTimestamp);
-	  if (isFinished || isTooLong || isLastFile) {
+	  if (isFinished || isTooLong || isLastApFile) {
 		writeSessionParamsToFiles(multimediaSession,resultFiles);
 		finishedSessions.add(multimediaSession);
 	  }
@@ -923,29 +924,36 @@ public class Main implements Constants {
 	}
 	durWriter.close();
 	
-	//Timed out but not finished sessions
-	if (session.checkIsTimedOut(lastReadTimestamp) & !session.checkIsFinished()) {
+	//If session is not finished and not timed out and not the last read AP file in list
+	if (!session.checkIsTimedOut(lastReadTimestamp) && !session.checkIsFinished() && !isLastApFile) {
 //                        System.out.printf("Session %s:%s %s:%s were finished because of timeout\n",
 //                                session.getIp1(),session.getPort1(),session.getIp2(),session.getPort2());
 //                        System.out.println("Amount of packets in the session: "+session.getIpV4Packets().size());
-	  
-	  String tcpOrUdp="Unknown\t";
-	  if(session.isUDP())
-		tcpOrUdp="UDP\t";
-	  if(session.isTCP())
-		tcpOrUdp="TCP\t";
-	  
-	  FileWriter timedOutWriter = new FileWriter(FileForTimedOut, APPEND_TO_FILE);
-	  timedOutWriter.write(String.format("%sSession %s:%s %s:%s was finished because of timeout\t",
-			  tcpOrUdp,session.getIp1(), session.getPort1(), session.getIp2(), session.getPort2()));
-	  timedOutWriter.write(String.format("Timeout value: %f\t",
-			  session.getTimeout()));
-	  timedOutWriter.write(String.format("Amount of packets in the session: %d\t",
-			  session.getIpV4Packets().size()));
-	  timedOutWriter.write(String.format("Session was considered timed out after reading: %s\n",
-			  apPcapFile));
-	  timedOutWriter.close();
+	  return;
 	}
+ 
+	String tcpOrUdp="Unknown\t";
+	if(session.isUDP())
+	  tcpOrUdp="UDP\t";
+	if(session.isTCP())
+	  tcpOrUdp="TCP\t";
+  
+	String finishedBecauseOf="normally";
+	//If session was finished because of timeout
+	if ( !session.checkIsFinished() && session.checkIsTimedOut(lastReadTimestamp)){
+	  finishedBecauseOf="because of timeout";
+	}
+ 
+	FileWriter timedOutWriter = new FileWriter(FileForTimedOut, APPEND_TO_FILE);
+	timedOutWriter.write(String.format("%sSession %s:%s %s:%s was finished %s\t",
+			tcpOrUdp,session.getIp1(), session.getPort1(), session.getIp2(), session.getPort2(),finishedBecauseOf));
+	timedOutWriter.write(String.format("Timeout value: %f\t",
+			session.getTimeout()));
+	timedOutWriter.write(String.format("Amount of packets in the session: %d\t",
+			session.getIpV4Packets().size()));
+	timedOutWriter.write(String.format("Session was considered timed out after reading: %s\n",
+			apPcapFile));
+	timedOutWriter.close();
 	
   }
   
