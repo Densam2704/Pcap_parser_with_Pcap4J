@@ -6,6 +6,7 @@ import java.net.Inet4Address;
 import java.net.UnknownHostException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Objects;
 
 public class Session implements Constants {
   protected String ip1;
@@ -20,6 +21,8 @@ public class Session implements Constants {
   
   private boolean isTCP = false;
   private boolean isUDP = false;
+  
+  
   
   //Set timeout value for  session
 //      if port is well-known value then timeout is short
@@ -280,6 +283,28 @@ public class Session implements Constants {
 	if (this.ip1.equals(ip1) && this.port1.equals(port1) && this.ip2.equals(ip2) && this.port2.equals(port2))
 	  return true;
       return this.ip1.equals(ip2) && this.port1.equals(port2) && this.ip2.equals(ip1) && this.port2.equals(port1);
+  }
+  
+  @Override
+  public int hashCode() {
+	return Objects.hash(ip1,ip2,port1,port2);
+  }
+  
+  @Override
+  public boolean equals(Object obj) {
+	if (this == obj) return true;
+	if (obj == null || getClass() != obj.getClass()) return false;
+	Session session = (Session) obj;
+	if( Objects.equals(ip1,session.ip1) &&
+			Objects.equals(ip2,session.ip2) &&
+			Objects.equals(port1,session.port1) &&
+			Objects.equals(port2,session.port2)
+	)
+	  return true;
+	return Objects.equals(ip1,session.ip2) &&
+			Objects.equals(ip2,session.ip1) &&
+			Objects.equals(port1,session.port2) &&
+			Objects.equals(port2,session.port1);
   }
   
   //Check if the ip1:port1 ip2:port2 belong to the Session
