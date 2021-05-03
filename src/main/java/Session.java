@@ -6,6 +6,7 @@ import java.net.Inet4Address;
 import java.net.UnknownHostException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.Objects;
 
 public class Session implements Constants {
@@ -22,7 +23,7 @@ public class Session implements Constants {
   private boolean isTCP = false;
   private boolean isUDP = false;
   
-  
+  private static Map<Integer,Session> allSessions;
   
   //Set timeout value for  session
 //      if port is well-known value then timeout is short
