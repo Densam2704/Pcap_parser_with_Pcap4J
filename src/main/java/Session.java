@@ -295,8 +295,10 @@ public class Session implements Constants {
   
   @Override
   public boolean equals(Object obj) {
-	if (this == obj) return true;
-	if (obj == null || getClass() != obj.getClass()) return false;
+	if (this == obj)
+	  return true;
+	if (obj == null || getClass() != obj.getClass())
+	  return false;
 	Session session = (Session) obj;
 	if( Objects.equals(ip1,session.ip1) &&
 			Objects.equals(ip2,session.ip2) &&

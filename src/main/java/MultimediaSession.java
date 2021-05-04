@@ -63,17 +63,16 @@ public class MultimediaSession extends Session {
   }
   
   protected double setPredefinedTimeout(IpV4Packet packet, String port1, String port2) {
-	double newTimeout = choosePredefinedTimeout(packet, port1, port2);
+	double newTimeout = super.choosePredefinedTimeout(packet, port1, port2);
 	
 	//We are taking the max timeout for Multimedia sessions
 	if (newTimeout > this.timeout) {
 	  this.port1 = port1;
 	  this.port2 = port2;
-	  timeout = newTimeout;
-	  return newTimeout;
+	  this.timeout = newTimeout;
 	}
 	
-	return timeout;
+	return this.timeout;
   }
   
   @Override
@@ -182,8 +181,10 @@ public class MultimediaSession extends Session {
   
   @Override
   public boolean equals(Object obj) {
-	if (this == obj) return true;
-	if (obj == null || getClass() != obj.getClass()) return false;
+	if (this == obj)
+	  return true;
+	if (obj == null || getClass() != obj.getClass())
+	  return false;
 	MultimediaSession session = (MultimediaSession) obj;
 	if( Objects.equals(ip1,session.ip1) && Objects.equals(ip2,session.ip2)
 	)
