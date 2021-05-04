@@ -85,7 +85,7 @@ public class MultimediaSession extends Session {
 	int size = listPort1.size() - 1;
 	String port1 = listPort1.get(size);
 	String port2 = listPort2.get(size);
-	listPort2.add(port1);
+
 	setPredefinedTimeout(ipV4Packet, port1, port2);
   }
   

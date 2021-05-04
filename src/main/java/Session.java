@@ -10,9 +10,13 @@ import java.util.Map;
 import java.util.Objects;
 
 public class Session implements Constants {
+  
+  //TODO Try to make internal session list ??? May be not needed
+  private static Map<Integer,Session> allSessions;
+  private static int countId = 0;
+  
   protected String ip1;
   protected String ip2;
-  
   protected String port1;
   protected String port2;
   
@@ -22,10 +26,6 @@ public class Session implements Constants {
   
   private boolean isTCP = false;
   private boolean isUDP = false;
-  
-  //TODO Try to make internal session list ??? May be not needed
-  private static Map<Integer,Session> allSessions;
-  private static int countId = 0;
   
   //Set timeout value for  session
 //      if port is well-known value then timeout is short

@@ -99,15 +99,15 @@ public class Main implements Constants {
  
 	for (int i = 0; i < sizeApFiles; i++){
 //	for (int i = 11; i < 12; i++) {
-	  System.out.println("\nReading file " + ++fNum + " out of " + sizeApFiles);
-	  apPcapFile = AP_DUMP_PATH + "\\" + apFiles.get(i).getName();
-	  readFileAndFindSessions();
-	
 	  
 	  if (i == sizeApFiles - 1) {
 		isLastApFile = true;
 	  }
 	  
+	  System.out.println("\nReading file " + ++fNum + " out of " + sizeApFiles);
+	  apPcapFile = AP_DUMP_PATH + "\\" + apFiles.get(i).getName();
+	  readFileAndFindSessions();
+	
 	  int before=0,after=0;
 	  
 	  before=sessions.size();
