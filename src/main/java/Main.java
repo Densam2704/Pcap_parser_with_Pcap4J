@@ -45,28 +45,21 @@ public class Main implements Constants {
 	  Files.createDirectory(Paths.get(RESULTS_PATH));
 	
 	// File names for result files
-	resultFnames[0] = "time delta from previous captured frame (only packets from STA to AP) (STA side)";
-	resultFnames[1] = "time delta from previous captured frame (only packets from STA to AP) (AP side)";
-	resultFnames[2] = "";
-	resultFnames[3] = "";
-	resultFnames[4] = "";
-	resultFnames[5] = "";
-	resultFnames[6] = "";
 	
-	resultFnames[7] = "session duration";
-	resultFnames[8] = "packet intervals in sessions";
-	resultFnames[9] = "packet lengths in sessions";
-	resultFnames[10] = "finished sessions";
+	resultFnames[0] = "session duration";
+	resultFnames[1] = "packet intervals in sessions";
+	resultFnames[2] = "packet lengths in sessions";
+	resultFnames[3] = "finished sessions";
 	
-	resultFnames[11] = "discord " + resultFnames[7];
-	resultFnames[12] = "discord " + resultFnames[8];
-	resultFnames[13] = "discord " + resultFnames[9];
-	resultFnames[14] = "discord " + resultFnames[10];
+	resultFnames[4] = "discord " + resultFnames[0];
+	resultFnames[5] = "discord " + resultFnames[1];
+	resultFnames[6] = "discord " + resultFnames[2];
+	resultFnames[7] = "discord " + resultFnames[3];
 	
-	resultFnames[15] = "telegram " + resultFnames[7];
-	resultFnames[16] = "telegram " + resultFnames[8];
-	resultFnames[17] = "telegram " + resultFnames[9];
-	resultFnames[18] = "telegram " + resultFnames[10];
+	resultFnames[8] = "telegram " + resultFnames[0];
+	resultFnames[9] = "telegram " + resultFnames[1];
+	resultFnames[10] = "telegram " + resultFnames[2];
+	resultFnames[11] = "telegram " + resultFnames[3];
 	
 	for (short i = 0; i < NUMBER_OF_RESULT_FILES; i++) {
 	  resultFiles[i] = RESULTS_PATH + "\\" + resultFnames[i] + ".txt";
@@ -101,9 +94,9 @@ public class Main implements Constants {
 	int discordTotal = 0;
 	int telegramTotal = 0;
 	int sizeApFiles = apFiles.size();
-	String[] analysisResultFiles = Arrays.copyOfRange(resultFiles, 7, 11);
-	String[] dsAnalysisResultFiles = Arrays.copyOfRange(resultFiles, 11, 15);
-	String[] telegramAnalysisResultFiles = Arrays.copyOfRange(resultFiles, 15, 19);
+	String[] analysisResultFiles = Arrays.copyOfRange(resultFiles, 0, 4);
+	String[] dsAnalysisResultFiles = Arrays.copyOfRange(resultFiles, 4, 8);
+	String[] telegramAnalysisResultFiles = Arrays.copyOfRange(resultFiles, 8, 12);
  
 	for (int i = 0; i < sizeApFiles; i++){
 //	for (int i = 11; i < 12; i++) {

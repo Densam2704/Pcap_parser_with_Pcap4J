@@ -23,7 +23,9 @@ public class Session implements Constants {
   private boolean isTCP = false;
   private boolean isUDP = false;
   
+  //TODO Try to make internal session list ??? May be not needed
   private static Map<Integer,Session> allSessions;
+  private static int countId = 0;
   
   //Set timeout value for  session
 //      if port is well-known value then timeout is short
