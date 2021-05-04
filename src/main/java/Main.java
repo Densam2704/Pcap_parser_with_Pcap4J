@@ -301,8 +301,8 @@ public class Main implements Constants {
   private static void parseIPv4Packet(IpV4Packet ipV4Packet) throws IllegalRawDataException {
 	// if ip packet is not null
 	if (ipV4Packet != null) {
-	  int portPos = PORT_NUMBER_POSITION_IN_RADIOTAP_PAYLOAD;
-	  int ipPos = IPv4_POSITION_IN_RADIOTAP_PAYLOAD;
+	  int tcpUdpPosition = TCP_UDP_POSITION_IN_RADIOTAP_PAYLOAD;
+	  int ipPosition = IPv4_POSITION_IN_RADIOTAP_PAYLOAD;
 	  String ip1 = "", ip2 = "", port1 = "", port2 = "";
 	  int payloadLength=radiotapPayload.length;
 	
@@ -312,24 +312,24 @@ public class Main implements Constants {
 	  int protocol = Integer.parseInt(ipV4Packet.getHeader().getProtocol().valueAsString());
 	
 	  switch (protocol) {
-		case UDP_INT:
+		case UDP:
 //			  udpCounter++;
-		  UdpPacket udpPacket = UdpPacket.newPacket(radiotapPayload, portPos, payloadLength - portPos);
+		  UdpPacket udpPacket = UdpPacket.newPacket(radiotapPayload, tcpUdpPosition, payloadLength - tcpUdpPosition);
 		  port1 = String.valueOf(udpPacket.getHeader().getSrcPort().valueAsInt());
 		  port2 = String.valueOf(udpPacket.getHeader().getDstPort().valueAsInt());
 		  break;
-		case TCP_INT:
+		case TCP:
 //			  tcpCounter++;
-		  TcpPacket tcpPacket = TcpPacket.newPacket(radiotapPayload, portPos, payloadLength - portPos);
+		  TcpPacket tcpPacket = TcpPacket.newPacket(radiotapPayload, tcpUdpPosition, payloadLength - tcpUdpPosition);
 		  port1 = String.valueOf(tcpPacket.getHeader().getSrcPort().valueAsInt());
 		  port2 = String.valueOf(tcpPacket.getHeader().getDstPort().valueAsInt());
 		  break;
-		case ICMPv4_INT:
+		case ICMPv4:
 		  //ICMPv4 contains UDP, so we count it as UDP
 //			  udpCounter++;
 		  //Position of UDP in ICMPv4 protocol
-		  portPos = ipPos + 8 + 20;
-		  udpPacket = UdpPacket.newPacket(radiotapPayload, portPos, payloadLength - portPos);
+		  tcpUdpPosition = ipPosition + 8 + 20;
+		  udpPacket = UdpPacket.newPacket(radiotapPayload, tcpUdpPosition, payloadLength - tcpUdpPosition);
 		  port1 = String.valueOf(udpPacket.getHeader().getSrcPort().valueAsInt());
 		  port2 = String.valueOf(udpPacket.getHeader().getDstPort().valueAsInt());
 		  break;
@@ -358,7 +358,7 @@ public class Main implements Constants {
 	}
 	
   }
-  
+  //TODO Get rid of duplicates. But how????
   private static void addPacketToSessionList(ArrayList<Session>sessions,
 											 Session newSession, IpV4Packet ipV4Packet, Timestamp timestamp) {
 	
@@ -504,8 +504,8 @@ public class Main implements Constants {
 	}
  
 	FileWriter timedOutWriter = new FileWriter(FileForTimedOut, APPEND_TO_FILE);
-	timedOutWriter.write(String.format("%sSession %s:%s %s:%s was finished %s\t",
-			tcpOrUdp,session.getIp1(), session.getPort1(), session.getIp2(), session.getPort2(),finishedBecauseOf));
+	timedOutWriter.write(String.format("%sSession %s was finished %s\t",
+			tcpOrUdp,session.toString(),finishedBecauseOf));
 	timedOutWriter.write(String.format("Timeout value: %f\t",
 			session.getTimeout()));
 	timedOutWriter.write(String.format("Amount of packets in the session: %d\t",

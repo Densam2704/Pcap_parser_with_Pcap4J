@@ -4,11 +4,11 @@ public interface Constants {
   String STATION = "sta";
   String ACCESS_POINT = "ap";
   
-  int ICMPv4_INT = 1;
+  int ICMPv4 = 1;
   String ICMPv4_STRING = "1 (ICMPv4)";
-  int UDP_INT = 17;
+  int UDP = 17;
   String UDP_STRING = "17 (UDP)";
-  int TCP_INT = 6;
+  int TCP = 6;
   String TCP_STRING = "6 (TCP)";
   
   int DOT11_DATA = 0x0020;
@@ -62,6 +62,6 @@ public interface Constants {
   
   // Some raw byte data positions
   int IPv4_POSITION_IN_RADIOTAP_PAYLOAD = 40;
-  int PORT_NUMBER_POSITION_IN_RADIOTAP_PAYLOAD = IPv4_POSITION_IN_RADIOTAP_PAYLOAD + 20;
+  int TCP_UDP_POSITION_IN_RADIOTAP_PAYLOAD = IPv4_POSITION_IN_RADIOTAP_PAYLOAD + 20;
   
 }
