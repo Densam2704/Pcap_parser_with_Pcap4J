@@ -142,8 +142,7 @@ public class Session implements Constants {
 //        System.out.printf("lastTmstmpInSession = %s\n",lastTmstmpInSession.toString());
 	Double difference = getTimeDifference(Main.lastReadPacketTimestamp, lastTmstmpInSession);
 //        System.out.printf("Session lasts = %.6f\n",difference);
-	if (timeout < 0)
-	  choosePredefinedTimeout(ipV4Packets.get(sessionSize - 1), port1, port2);
+	  
       return difference > timeout;
   }
   
