@@ -68,9 +68,9 @@ public class Main implements Constants {
 	  }
 	  
 	}
-	
-	getFileList(AP_DUMP_PATH, apFiles, ".pcap");
-	getFileList(STA_DUMP_PATH, staFiles, ".pcap");
+ 
+	apFiles = getFilesFromPathWithFormat(AP_DUMP_PATH,  ".pcap");
+	staFiles = getFilesFromPathWithFormat(STA_DUMP_PATH,  ".pcap");
 	
 	System.out.println(apFiles.size() + " pcap files were found in " + AP_DUMP_PATH);
 	System.out.println(staFiles.size() + " pcap files were found in " + STA_DUMP_PATH);
@@ -193,8 +193,9 @@ public class Main implements Constants {
   }
   
   
-  public static void getFileList(String filepath, ArrayList<File> fileList, String fileFormat) {
-	
+  public static ArrayList<File> getFilesFromPathWithFormat(String filepath,  String fileFormat) {
+  
+	ArrayList<File> fileList = new ArrayList<>();
 	File directory = new File(filepath);
 	File[] files = directory.listFiles((FileFilter) FileFileFilter.FILE);
 	
@@ -207,7 +208,7 @@ public class Main implements Constants {
 		fileList.add(f);
 	  }
 	}
-	
+	return fileList;
   }
   
   
