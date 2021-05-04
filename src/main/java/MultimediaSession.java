@@ -4,6 +4,7 @@ import org.pcap4j.packet.TcpPacket;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Objects;
 
 public class MultimediaSession extends Session {
   private final ArrayList<String> listPort1 = new ArrayList<>();
@@ -170,6 +171,27 @@ public class MultimediaSession extends Session {
   }
   
   @Override
+  public boolean has(Session s) {
+	return this.equals(s) && this.hashCode()==s.hashCode();
+  }
+  
+  @Override
+  public int hashCode() {
+	return Objects.hash(ip1,ip2);
+  }
+  
+  @Override
+  public boolean equals(Object obj) {
+	if (this == obj) return true;
+	if (obj == null || getClass() != obj.getClass()) return false;
+	MultimediaSession session = (MultimediaSession) obj;
+	if( Objects.equals(ip1,session.ip1) && Objects.equals(ip2,session.ip2)
+	)
+	  return true;
+	return Objects.equals(ip1,session.ip2) && Objects.equals(ip2,session.ip1);
+  }
+  
+  @Override
   public boolean checkIsFinished() {
 	
 	Session tcpSession = getSessionWithTCPOnly();
@@ -217,4 +239,6 @@ public class MultimediaSession extends Session {
 	}
 	return false;
   }
+  
+  
 }

@@ -290,7 +290,7 @@ public class Session implements Constants {
   
   @Override
   public int hashCode() {
-	return Objects.hash(ip1,ip2,port1,port2);
+    return Objects.hash(ip1,ip2,port1,port2);
   }
   
   @Override
@@ -312,15 +312,7 @@ public class Session implements Constants {
   
   //Check if the ip1:port1 ip2:port2 belong to the Session
   public boolean has(Session s) {
-	
-	String ip1 = s.getIp1();
-	String ip2 = s.getIp2();
-	String port1 = s.getPort1();
-	String port2 = s.getPort2();
-	
-	if (this.ip1.equals(ip1) && this.port1.equals(port1) && this.ip2.equals(ip2) && this.port2.equals(port2))
-	  return true;
-	return this.ip1.equals(ip2) && this.port1.equals(port2) && this.ip2.equals(ip1) && this.port2.equals(port1);
+	return this.equals(s) && this.hashCode()==s.hashCode();
   }
   
   //Adds packet to the session

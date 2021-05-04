@@ -289,11 +289,6 @@ public class Main implements Constants {
 	System.arraycopy(payload, wlanDaPos, byteWlanDa, 0, wlanAddrLen);
 	String wlanDa = byteArrToHexStr(byteWlanDa);
 	
-	//If SA and DA in both AP and STA are equal and
-	//If checksums in both AP and STA packets are equal
-	//then we have found exactly the same packet
-	//in AP file. And we can take timestamp from this packet
-	
 	// If traffic belongs to our STAs or to our AP
 	return (wlanDa.equals(STA1_MAC) || wlanDa.equals(STA2_MAC))
 			&& wlanSa.equals(AP_MAC)
