@@ -131,16 +131,16 @@ public class Session implements Constants {
     return false;
   }
   
-  //Checks time difference between last added packet in session and the current packet timestamp.
+  //Checks time difference between last added packet in session and the last read packet timestamp.
   //If difference > timeout returns true
-  public boolean checkIsTimedOut(Timestamp currPktTimestamp) {
+  public boolean checkIsTimedOut() {
 	
 	int sessionSize = packetTimestamps.size();
 	Timestamp lastTmstmpInSession = packetTimestamps.get(sessionSize - 1);
 
 //        System.out.printf("currPktTimestamp = %s\n",currPktTimestamp.toString());
 //        System.out.printf("lastTmstmpInSession = %s\n",lastTmstmpInSession.toString());
-	Double difference = getTimeDifference(currPktTimestamp, lastTmstmpInSession);
+	Double difference = getTimeDifference(Main.lastReadPacketTimestamp, lastTmstmpInSession);
 //        System.out.printf("Session lasts = %.6f\n",difference);
 	if (timeout < 0)
 	  choosePredefinedTimeout(ipV4Packets.get(sessionSize - 1), port1, port2);

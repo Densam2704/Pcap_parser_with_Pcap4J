@@ -8,7 +8,6 @@ import org.pcap4j.packet.namednumber.Dot11FrameType;
 import org.apache.commons.io.comparator.LastModifiedFileComparator;
 
 import java.io.*;
-import java.net.InetAddress;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.sql.Timestamp;
@@ -27,7 +26,7 @@ public class Main implements Constants {
   public static boolean isLastApFile = false;
   public static ArrayList<File> apFiles = new ArrayList<>();
   public static ArrayList<File> staFiles = new ArrayList<>();
-  public static Timestamp lastReadTimestamp = null;
+  public static Timestamp lastReadPacketTimestamp = null;
   
   public static void main(String[] args) throws PcapNativeException, NotOpenException, IOException {
   
@@ -152,7 +151,7 @@ public class Main implements Constants {
 	  session = sessions.get(j);
 	
 	  boolean isFinished = session.checkIsFinished();
-	  boolean isTooLong = session.checkIsTimedOut(lastReadTimestamp);
+	  boolean isTooLong = session.checkIsTimedOut();
 	  //If the session was finished or if the last added packet was added too long ago
 	  //If this is the last file
 	  if (isFinished || isTooLong || isLastApFile) {
@@ -178,7 +177,7 @@ public class Main implements Constants {
 	for (int j = 0; j < dsSize; j++) {
 	  MultimediaSession multimediaSession = multimediaSessions.get(j);
 	  boolean isFinished = multimediaSession.checkIsFinished();
-	  boolean isTooLong = multimediaSession.checkIsTimedOut(lastReadTimestamp);
+	  boolean isTooLong = multimediaSession.checkIsTimedOut();
 	  if (isFinished || isTooLong || isLastApFile) {
 		writeSessionParamsToFiles(multimediaSession,resultFiles);
 		finishedSessions.add(multimediaSession);
@@ -222,7 +221,7 @@ public class Main implements Constants {
 	
 	while ((packet = apPh.getNextPacket()) != null) {
 	  apPacketCounter++;
-	  lastReadTimestamp = apPh.getTimestamp();
+	  lastReadPacketTimestamp = apPh.getTimestamp();
 	  RadiotapPacket radiotapPacket = packet.get(RadiotapPacket.class);
 	  try {
 	    parseRadiotapPacket(radiotapPacket);
@@ -376,7 +375,7 @@ public class Main implements Constants {
 		
 		//if  existing session has new session parameters and existing session is not finished or timed out
 		if (existingSession.has(newSession) &&
-				!existingSession.checkIsFinished() && !existingSession.checkIsTimedOut(lastReadTimestamp)) {
+				!existingSession.checkIsFinished() && !existingSession.checkIsTimedOut()) {
 		  //add packet to the existing session and break the cycle FOR
 		  existingSession.appendPacket(ipV4Packet, timestamp);
 		  break;
@@ -484,7 +483,7 @@ public class Main implements Constants {
 	durWriter.close();
 	
 	//If session is not finished and not timed out and not the last read AP file in list
-	if (!session.checkIsTimedOut(lastReadTimestamp) && !session.checkIsFinished() && !isLastApFile) {
+	if (!session.checkIsTimedOut() && !session.checkIsFinished() && !isLastApFile) {
 //                        System.out.printf("Session %s:%s %s:%s were finished because of timeout\n",
 //                                session.getIp1(),session.getPort1(),session.getIp2(),session.getPort2());
 //                        System.out.println("Amount of packets in the session: "+session.getIpV4Packets().size());
@@ -499,7 +498,7 @@ public class Main implements Constants {
   
 	String finishedBecauseOf="normally";
 	//If session was finished because of timeout
-	if ( !session.checkIsFinished() && session.checkIsTimedOut(lastReadTimestamp)){
+	if ( !session.checkIsFinished() && session.checkIsTimedOut()){
 	  finishedBecauseOf="because of timeout";
 	}
  
