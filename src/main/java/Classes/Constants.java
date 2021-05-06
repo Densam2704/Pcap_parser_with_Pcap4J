@@ -1,3 +1,5 @@
+package Classes;
+
 public interface Constants {
   int NUMBER_OF_RESULT_FILES = 20;
   boolean APPEND_TO_FILE = true;

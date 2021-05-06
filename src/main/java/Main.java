@@ -1,6 +1,8 @@
-// This program uses library for reading PCAP files from
 // https://github.com/kaitoy/pcap4j
 
+import Classes.Constants;
+import Classes.MultimediaSession;
+import Classes.Session;
 import org.apache.commons.io.filefilter.FileFileFilter;
 import org.pcap4j.core.*;
 import org.pcap4j.packet.*;
@@ -40,40 +42,40 @@ public class Main implements Constants {
 
 
 //      If there is no directory for results then create it
-	if (!Files.exists(Paths.get(RESULTS_PATH)))
-	  Files.createDirectory(Paths.get(RESULTS_PATH));
+	if (!Files.exists(Paths.get(Constants.RESULTS_PATH)))
+	  Files.createDirectory(Paths.get(Constants.RESULTS_PATH));
 	
 	// File names for result files
 	
-	resultFnames[0] = "session duration";
-	resultFnames[1] = "packet intervals in sessions";
-	resultFnames[2] = "packet lengths in sessions";
-	resultFnames[3] = "finished sessions";
+	Constants.resultFnames[0] = "session duration";
+	Constants.resultFnames[1] = "packet intervals in sessions";
+	Constants.resultFnames[2] = "packet lengths in sessions";
+	Constants.resultFnames[3] = "finished sessions";
 	
-	resultFnames[4] = "discord " + resultFnames[0];
-	resultFnames[5] = "discord " + resultFnames[1];
-	resultFnames[6] = "discord " + resultFnames[2];
-	resultFnames[7] = "discord " + resultFnames[3];
+	Constants.resultFnames[4] = "discord " + Constants.resultFnames[0];
+	Constants.resultFnames[5] = "discord " + Constants.resultFnames[1];
+	Constants.resultFnames[6] = "discord " + Constants.resultFnames[2];
+	Constants.resultFnames[7] = "discord " + Constants.resultFnames[3];
 	
-	resultFnames[8] = "telegram " + resultFnames[0];
-	resultFnames[9] = "telegram " + resultFnames[1];
-	resultFnames[10] = "telegram " + resultFnames[2];
-	resultFnames[11] = "telegram " + resultFnames[3];
+	Constants.resultFnames[8] = "telegram " + Constants.resultFnames[0];
+	Constants.resultFnames[9] = "telegram " + Constants.resultFnames[1];
+	Constants.resultFnames[10] = "telegram " + Constants.resultFnames[2];
+	Constants.resultFnames[11] = "telegram " + Constants.resultFnames[3];
 	
-	for (short i = 0; i < NUMBER_OF_RESULT_FILES; i++) {
-	  resultFiles[i] = RESULTS_PATH + "\\" + resultFnames[i] + ".txt";
+	for (short i = 0; i < Constants.NUMBER_OF_RESULT_FILES; i++) {
+	  Constants.resultFiles[i] = Constants.RESULTS_PATH + "\\" + Constants.resultFnames[i] + ".txt";
 	  //If some result files from previous Run are left, delete them
-	  if (Files.exists(Paths.get(resultFiles[i]))) {
-		Files.delete(Paths.get(resultFiles[i]));
+	  if (Files.exists(Paths.get(Constants.resultFiles[i]))) {
+		Files.delete(Paths.get(Constants.resultFiles[i]));
 	  }
 	  
 	}
  
-	apFiles = getFilesFromPathWithFormat(AP_DUMP_PATH,  ".pcap");
-	staFiles = getFilesFromPathWithFormat(STA_DUMP_PATH,  ".pcap");
+	apFiles = getFilesFromPathWithFormat(Constants.AP_DUMP_PATH,  ".pcap");
+	staFiles = getFilesFromPathWithFormat(Constants.STA_DUMP_PATH,  ".pcap");
 	
-	System.out.println(apFiles.size() + " pcap files were found in " + AP_DUMP_PATH);
-	System.out.println(staFiles.size() + " pcap files were found in " + STA_DUMP_PATH);
+	System.out.println(apFiles.size() + " pcap files were found in " + Constants.AP_DUMP_PATH);
+	System.out.println(staFiles.size() + " pcap files were found in " + Constants.STA_DUMP_PATH);
 
 //        String staFilename = "sta.pcap";
 
@@ -93,9 +95,9 @@ public class Main implements Constants {
 	int discordTotal = 0;
 	int telegramTotal = 0;
 	int sizeApFiles = apFiles.size();
-	String[] analysisResultFiles = Arrays.copyOfRange(resultFiles, 0, 4);
-	String[] dsAnalysisResultFiles = Arrays.copyOfRange(resultFiles, 4, 8);
-	String[] telegramAnalysisResultFiles = Arrays.copyOfRange(resultFiles, 8, 12);
+	String[] analysisResultFiles = Arrays.copyOfRange(Constants.resultFiles, 0, 4);
+	String[] dsAnalysisResultFiles = Arrays.copyOfRange(Constants.resultFiles, 4, 8);
+	String[] telegramAnalysisResultFiles = Arrays.copyOfRange(Constants.resultFiles, 8, 12);
  
 	for (int i = 0; i < sizeApFiles; i++){
 //	for (int i = 11; i < 12; i++) {
@@ -105,7 +107,7 @@ public class Main implements Constants {
 	  }
 	  
 	  System.out.println("\nReading file " + ++fNum + " out of " + sizeApFiles);
-	  apPcapFile = AP_DUMP_PATH + "\\" + apFiles.get(i).getName();
+	  apPcapFile = Constants.AP_DUMP_PATH + "\\" + apFiles.get(i).getName();
 	  readFileAndFindSessions();
 	
 	  int before=0,after=0;
@@ -139,7 +141,7 @@ public class Main implements Constants {
 	}
   }
   
-  private static void analiseSession(ArrayList<Session>sessions,String[]resultFiles)
+  private static void analiseSession(ArrayList<Session>sessions, String[]resultFiles)
 		  throws IOException {
   
 	int sessionSize = sessions.size();
@@ -249,9 +251,9 @@ public class Main implements Constants {
 	  );
 	  //Looking only for  IEEE802.11 data frames in a Type/Subtype field
 	  //that belong to Testbed network
-	  if (type.value() == DOT11_DATA && (belongsToTestbed(radiotapPayload))) {
+	  if (type.value() == Constants.DOT11_DATA && (belongsToTestbed(radiotapPayload))) {
 		
-		int ipPos = IPv4_POSITION_IN_RADIOTAP_PAYLOAD;
+		int ipPos = Constants.IPv4_POSITION_IN_RADIOTAP_PAYLOAD;
 		IpV4Packet ipV4Packet = null;
 		
 		try {
@@ -290,19 +292,19 @@ public class Main implements Constants {
 	String wlanDa = byteArrToHexStr(byteWlanDa);
 	
 	// If traffic belongs to our STAs or to our AP
-	return (wlanDa.equals(STA1_MAC) || wlanDa.equals(STA2_MAC))
-			&& wlanSa.equals(AP_MAC)
+	return (wlanDa.equals(Constants.STA1_MAC) || wlanDa.equals(Constants.STA2_MAC))
+			&& wlanSa.equals(Constants.AP_MAC)
 			||
-			wlanDa.equals(AP_MAC) &&
-					(wlanSa.equals(STA1_MAC) || wlanSa.equals(STA2_MAC));
+			wlanDa.equals(Constants.AP_MAC) &&
+					(wlanSa.equals(Constants.STA1_MAC) || wlanSa.equals(Constants.STA2_MAC));
   }
   
   //Parse IPv4Packet to find sessions
   private static void parseIPv4Packet(IpV4Packet ipV4Packet) throws IllegalRawDataException {
 	// if ip packet is not null
 	if (ipV4Packet != null) {
-	  int tcpUdpPosition = TCP_UDP_POSITION_IN_RADIOTAP_PAYLOAD;
-	  int ipPosition = IPv4_POSITION_IN_RADIOTAP_PAYLOAD;
+	  int tcpUdpPosition = Constants.TCP_UDP_POSITION_IN_RADIOTAP_PAYLOAD;
+	  int ipPosition = Constants.IPv4_POSITION_IN_RADIOTAP_PAYLOAD;
 	  String ip1 = "", ip2 = "", port1 = "", port2 = "";
 	  int payloadLength=radiotapPayload.length;
 	
@@ -312,19 +314,19 @@ public class Main implements Constants {
 	  int protocol = Integer.parseInt(ipV4Packet.getHeader().getProtocol().valueAsString());
 	
 	  switch (protocol) {
-		case UDP:
+		case Constants.UDP:
 //			  udpCounter++;
 		  UdpPacket udpPacket = UdpPacket.newPacket(radiotapPayload, tcpUdpPosition, payloadLength - tcpUdpPosition);
 		  port1 = String.valueOf(udpPacket.getHeader().getSrcPort().valueAsInt());
 		  port2 = String.valueOf(udpPacket.getHeader().getDstPort().valueAsInt());
 		  break;
-		case TCP:
+		case Constants.TCP:
 //			  tcpCounter++;
 		  TcpPacket tcpPacket = TcpPacket.newPacket(radiotapPayload, tcpUdpPosition, payloadLength - tcpUdpPosition);
 		  port1 = String.valueOf(tcpPacket.getHeader().getSrcPort().valueAsInt());
 		  port2 = String.valueOf(tcpPacket.getHeader().getDstPort().valueAsInt());
 		  break;
-		case ICMPv4:
+		case Constants.ICMPv4:
 		  //ICMPv4 contains UDP, so we count it as UDP
 //			  udpCounter++;
 		  //Position of UDP in ICMPv4 protocol
@@ -431,7 +433,7 @@ public class Main implements Constants {
 	String FileForTimedOut = fileNames[3];
 	
 	//Packet Lengths
-	FileWriter pktLengthsWriter = new FileWriter(FileForLength, APPEND_TO_FILE);
+	FileWriter pktLengthsWriter = new FileWriter(FileForLength, Constants.APPEND_TO_FILE);
 	ArrayList<IpV4Packet> pkts = session.getIpV4Packets();
 	for (IpV4Packet pkt : pkts) {
 //                    System.out.println("Packet length = "+pkt.getHeader().getTotalLengthAsInt());
@@ -443,7 +445,7 @@ public class Main implements Constants {
 	
 	
 	//Intervals
-	FileWriter intervalWriter = new FileWriter(FileForInterval, APPEND_TO_FILE);
+	FileWriter intervalWriter = new FileWriter(FileForInterval, Constants.APPEND_TO_FILE);
 	Timestamp prevPacketTmstmp = null;
 	ArrayList<Timestamp> tmstmps = session.getPacketTimestamps();
  
@@ -467,25 +469,25 @@ public class Main implements Constants {
 	intervalWriter.close();
 	
 	
-	//Session duration
-	FileWriter durWriter = new FileWriter(FileForDuration, APPEND_TO_FILE);
+	//Classes.Session duration
+	FileWriter durWriter = new FileWriter(FileForDuration, Constants.APPEND_TO_FILE);
 	double dur = session.getSessionDuration();
 	if (dur > 0) {
-//                System.out.println(" Session duration in seconds: "+dur);
+//                System.out.println(" Classes.Session duration in seconds: "+dur);
 	  durWriter.write(String.format("%.9f\n", dur).replaceAll(",", "."));
 	} else {
 	  durWriter.write(String.format("%.9f\n", 0.0).replaceAll(",", "."));
 	  //For testing
 //                System.out.printf("File:%s\n session %s:%s %s:%s has bad duration %f\n",apPcapFile,session.getIp1(),
 //                        session.getPort1(),session.getIp2(),session.getPort2(),dur);
-//                System.out.printf("Session start time: %s\nSession end time: %s\n",
+//                System.out.printf("Classes.Session start time: %s\nClasses.Session end time: %s\n",
 //                        session.getStartTime().toString(),session.getEndTime());
 	}
 	durWriter.close();
 	
 	//If session is not finished and not timed out and not the last read AP file in list
 	if (!session.checkIsTimedOut() && !session.checkIsFinished() && !isLastApFile) {
-//                        System.out.printf("Session %s:%s %s:%s were finished because of timeout\n",
+//                        System.out.printf("Classes.Session %s:%s %s:%s were finished because of timeout\n",
 //                                session.getIp1(),session.getPort1(),session.getIp2(),session.getPort2());
 //                        System.out.println("Amount of packets in the session: "+session.getIpV4Packets().size());
 	  return;
@@ -503,14 +505,14 @@ public class Main implements Constants {
 	  finishedBecauseOf="because of timeout";
 	}
  
-	FileWriter timedOutWriter = new FileWriter(FileForTimedOut, APPEND_TO_FILE);
+	FileWriter timedOutWriter = new FileWriter(FileForTimedOut, Constants.APPEND_TO_FILE);
 	timedOutWriter.write(String.format("%sSession %s was finished %s\t",
 			tcpOrUdp,session.toString(),finishedBecauseOf));
 	timedOutWriter.write(String.format("Timeout value: %f\t",
 			session.getTimeout()));
 	timedOutWriter.write(String.format("Amount of packets in the session: %d\t",
 			session.getIpV4Packets().size()));
-	timedOutWriter.write(String.format("Session was considered timed out after reading: %s\n",
+	timedOutWriter.write(String.format("Classes.Session was considered timed out after reading: %s\n",
 			apPcapFile));
 	timedOutWriter.close();
 	

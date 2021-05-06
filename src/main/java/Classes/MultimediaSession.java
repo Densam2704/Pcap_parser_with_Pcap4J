@@ -1,3 +1,5 @@
+package Classes;
+
 import org.pcap4j.packet.IllegalRawDataException;
 import org.pcap4j.packet.IpV4Packet;
 import org.pcap4j.packet.TcpPacket;
@@ -38,7 +40,7 @@ public class MultimediaSession extends Session {
   }
   
   //Is it safe?? we have to sort out every packet in sessions
-// public void appendSession(Session s){
+// public void appendSession(Classes.Session s){
 //
 //  this.port1.add(s.getPort1());
 //  this.port2.add(s.getPort2());

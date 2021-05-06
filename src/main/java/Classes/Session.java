@@ -1,3 +1,5 @@
+package Classes;
+
 import org.pcap4j.packet.IllegalRawDataException;
 import org.pcap4j.packet.IpV4Packet;
 import org.pcap4j.packet.TcpPacket;
@@ -141,7 +143,7 @@ public class Session implements Constants {
 //        System.out.printf("currPktTimestamp = %s\n",currPktTimestamp.toString());
 //        System.out.printf("lastTmstmpInSession = %s\n",lastTmstmpInSession.toString());
 	Double difference = getTimeDifference(Main.lastReadPacketTimestamp, lastTmstmpInSession);
-//        System.out.printf("Session lasts = %.6f\n",difference);
+//        System.out.printf("Classes.Session lasts = %.6f\n",difference);
 	  
       return difference > timeout;
   }
@@ -280,7 +282,7 @@ public class Session implements Constants {
 	return timestamp;
   }
   
-  //Check if the ip1:port1 ip2:port2 belong to the Session
+  //Check if the ip1:port1 ip2:port2 belong to the Classes.Session
   public boolean has(String ip1, String port1, String ip2, String port2) {
 	if (this.ip1.equals(ip1) && this.port1.equals(port1) && this.ip2.equals(ip2) && this.port2.equals(port2))
 	  return true;
@@ -311,7 +313,7 @@ public class Session implements Constants {
 			Objects.equals(port2,session.port1);
   }
   
-  //Check if the ip1:port1 ip2:port2 belong to the Session
+  //Check if the ip1:port1 ip2:port2 belong to the Classes.Session
   public boolean has(Session s) {
 	return this.equals(s) && this.hashCode()==s.hashCode();
   }
