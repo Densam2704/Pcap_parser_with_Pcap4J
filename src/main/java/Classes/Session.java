@@ -142,7 +142,7 @@ public class Session implements Constants {
 
 //        System.out.printf("currPktTimestamp = %s\n",currPktTimestamp.toString());
 //        System.out.printf("lastTmstmpInSession = %s\n",lastTmstmpInSession.toString());
-	Double difference = getTimeDifference(Main.lastReadPacketTimestamp, lastTmstmpInSession);
+	Double difference = getTimeDifference(Main.Main.lastReadPacketTimestamp, lastTmstmpInSession);
 //        System.out.printf("Classes.Session lasts = %.6f\n",difference);
 	  
       return difference > timeout;

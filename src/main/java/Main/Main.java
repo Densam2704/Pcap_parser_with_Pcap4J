@@ -1,4 +1,4 @@
-// https://github.com/kaitoy/pcap4j
+package Main;// https://github.com/kaitoy/pcap4j
 
 import Classes.Constants;
 import Classes.MultimediaSession;
@@ -469,25 +469,25 @@ public class Main implements Constants {
 	intervalWriter.close();
 	
 	
-	//Classes.Session duration
+	//Session duration
 	FileWriter durWriter = new FileWriter(FileForDuration, Constants.APPEND_TO_FILE);
 	double dur = session.getSessionDuration();
 	if (dur > 0) {
-//                System.out.println(" Classes.Session duration in seconds: "+dur);
+//                System.out.println(" Session duration in seconds: "+dur);
 	  durWriter.write(String.format("%.9f\n", dur).replaceAll(",", "."));
 	} else {
 	  durWriter.write(String.format("%.9f\n", 0.0).replaceAll(",", "."));
 	  //For testing
 //                System.out.printf("File:%s\n session %s:%s %s:%s has bad duration %f\n",apPcapFile,session.getIp1(),
 //                        session.getPort1(),session.getIp2(),session.getPort2(),dur);
-//                System.out.printf("Classes.Session start time: %s\nClasses.Session end time: %s\n",
+//                System.out.printf("Session start time: %s\nSession end time: %s\n",
 //                        session.getStartTime().toString(),session.getEndTime());
 	}
 	durWriter.close();
 	
 	//If session is not finished and not timed out and not the last read AP file in list
 	if (!session.checkIsTimedOut() && !session.checkIsFinished() && !isLastApFile) {
-//                        System.out.printf("Classes.Session %s:%s %s:%s were finished because of timeout\n",
+//                        System.out.printf("Session %s:%s %s:%s were finished because of timeout\n",
 //                                session.getIp1(),session.getPort1(),session.getIp2(),session.getPort2());
 //                        System.out.println("Amount of packets in the session: "+session.getIpV4Packets().size());
 	  return;
@@ -512,7 +512,7 @@ public class Main implements Constants {
 			session.getTimeout()));
 	timedOutWriter.write(String.format("Amount of packets in the session: %d\t",
 			session.getIpV4Packets().size()));
-	timedOutWriter.write(String.format("Classes.Session was considered timed out after reading: %s\n",
+	timedOutWriter.write(String.format("Session was considered timed out after reading: %s\n",
 			apPcapFile));
 	timedOutWriter.close();
 	
