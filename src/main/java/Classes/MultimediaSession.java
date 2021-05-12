@@ -196,6 +196,11 @@ public class MultimediaSession extends Session {
   }
   
   @Override
+  public String toString() {
+	return String.format("%s\t%s\t",ip1,ip2);
+  }
+  
+  @Override
   public boolean checkIsFinished() {
 	
 	Session tcpSession = getSessionWithTCPOnly();

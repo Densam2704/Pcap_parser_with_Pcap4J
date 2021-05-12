@@ -199,7 +199,7 @@ public class Session implements Constants {
 	if (start != null && end != null) {
 	  dur = getTimeDifference(start, end);
 	}
-	System.out.println("Start = "+start.toString()+"\tEnd = "+end.toString() + "\tDur = "+dur);
+//	System.out.println("Start = "+start.toString()+"\tEnd = "+end.toString() + "\tDur = "+dur);
 	return dur;
   }
   
