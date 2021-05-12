@@ -1,5 +1,6 @@
 package Classes;
 
+import Main.Main;
 import org.pcap4j.packet.IllegalRawDataException;
 import org.pcap4j.packet.IpV4Packet;
 import org.pcap4j.packet.TcpPacket;
@@ -7,6 +8,7 @@ import org.pcap4j.packet.TcpPacket;
 import java.net.Inet4Address;
 import java.net.UnknownHostException;
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Objects;
@@ -142,7 +144,7 @@ public class Session implements Constants {
 
 //        System.out.printf("currPktTimestamp = %s\n",currPktTimestamp.toString());
 //        System.out.printf("lastTmstmpInSession = %s\n",lastTmstmpInSession.toString());
-	Double difference = getTimeDifference(Main.Main.lastReadPacketTimestamp, lastTmstmpInSession);
+	Double difference = getTimeDifference(Main.lastReadPacketTimestamp, lastTmstmpInSession);
 //        System.out.printf("Classes.Session lasts = %.6f\n",difference);
 	  
       return difference > timeout;
@@ -177,26 +179,15 @@ public class Session implements Constants {
 	return false;
   }
   
-  //Get Time difference in seconds between 2 frames
+  //Get Time difference in seconds between 2 times
   public static Double getTimeDifference(Timestamp time1, Timestamp time2) {
 	double time_delta = 0;
-	
-	//If both timestamps are not null
-	if (time1 != null && time2 != null) {
-	  
-	  int deltaInMs = (int) Math.abs(time2.getTime() - time1.getTime());
-	  //If delta in seconds is > 0 then we should count seconds together with nano seconds
-	  if (deltaInMs / 1000 != 0) {
-		time_delta = deltaInMs / 1000;
-	  }
-	  //If not, then we can simply count delta in nano seconds
-	  int time2Nanos = time2.getNanos();
-	  time_delta += (double) Math.abs(time1.getNanos() - time2Nanos) / 1000000000;
-	  
-	  
-	}
+		if (time1 != null && time2 != null) {
+		  long diffInSeconds= time1.toInstant().getEpochSecond()-time2.toInstant().getEpochSecond();
+		  long diffInNanos = time1.toInstant().getNano()-time2.toInstant().getNano();
+		  time_delta = Math.abs(diffInSeconds + (double)diffInNanos/1000000000);
+		}
 	return time_delta;
-	
   }
   
   
@@ -205,10 +196,10 @@ public class Session implements Constants {
 	
 	Timestamp start = this.getStartTime();
 	Timestamp end = this.getEndTime();
-	
 	if (start != null && end != null) {
 	  dur = getTimeDifference(start, end);
 	}
+	System.out.println("Start = "+start.toString()+"\tEnd = "+end.toString() + "\tDur = "+dur);
 	return dur;
   }
   

@@ -25,7 +25,8 @@ public class MultimediaSession extends Session {
   
   public MultimediaSession(Session s) {
 	//So that we could have ip1:port1 in Testbed network
-	if (checkIsTestbed(ip1)) {
+	if (checkIsTestbed(s.ip1)) {
+//	  System.out.println("ip "+s.ip1 + " is form Testbed");
 	  this.ip1 = s.getIp1();
 	  this.ip2 = s.getIp2();
 	  this.listPort1.add(s.getPort1());
