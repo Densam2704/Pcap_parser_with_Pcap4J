@@ -40,20 +40,6 @@ public class MultimediaSession extends Session {
 	
   }
   
-  //Is it safe?? we have to sort out every packet in sessions
-// public void appendSession(Classes.Session s){
-//
-//  this.port1.add(s.getPort1());
-//  this.port2.add(s.getPort2());
-//  this.ipV4Packets.addAll(s.getIpV4Packets());
-//  this.packetTimestamps.addAll(s.getPacketTimestamps());
-//  int listSize = s.getPacketTimestamps().size();
-//  for (int i = 0; i <listSize; i++){
-//   this.timeouts.add(s.getTimeout());
-//   this.listIsTCP.add(s.isTCP());
-//   this.listIsUDP.add(s.isUDP());
-//  }
-  
   public void appendPacket(IpV4Packet ipV4Packet, Timestamp arrivalTime, String port1, String port2) {
 	ipV4Packets.add(ipV4Packet);
 	packetTimestamps.add(arrivalTime);
@@ -104,13 +90,13 @@ public class MultimediaSession extends Session {
   }
   
   
+  //TCP handshake consists of 3 packets: SYN, SYN+ACK and ACK
+  //TCP session start time = time of the 3d packet (ACK)
+  //if there is was no TCP handshake, then we will take timestamp of the first packet as default.
   @Override
   public Timestamp getStartTime() {
 	
-	//TCP handshake consists of 3 packets: SYN, SYN+ACK and ACK
-	//TCP session start time = time of the 3d packet (ACK)
-	//if there is was no TCP handshake, then we will take timestamp of the first packet as default.
-	Timestamp defaultTimestamp = packetTimestamps.get(0);
+	Timestamp defaultStartTime = packetTimestamps.get(0);
 	
 	int size = ipV4Packets.size();
 	
@@ -123,7 +109,7 @@ public class MultimediaSession extends Session {
 	  return timestamp;
 	}
 	
-	return defaultTimestamp;
+	return defaultStartTime;
   }
   
   private Session getSessionWithTCPOnly() {
@@ -148,7 +134,7 @@ public class MultimediaSession extends Session {
 	
 	int size = ipV4Packets.size();
 	//If there is no TCP FIN, we will take time of the last packet
-	Timestamp defaultTimestamp = packetTimestamps.get(size - 1);
+	Timestamp defaultEndTime = packetTimestamps.get(size - 1);
 	
 	
 	//First we need a sessions with TCP packets only
@@ -159,7 +145,7 @@ public class MultimediaSession extends Session {
 	  return timestamp;
 	}
 	
-	return defaultTimestamp;
+	return defaultEndTime;
   }
   
   @Override

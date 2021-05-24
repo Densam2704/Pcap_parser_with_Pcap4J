@@ -240,7 +240,7 @@ public class Main implements Constants{
 	
   }
   
-  //Parse Radiotap packet to find IP packet
+  //Parse Radiotap packet to find IP packet inside
   private static void parseRadiotapPacket(RadiotapPacket radiotapPacket) throws IllegalRawDataException {
   
 	if (radiotapPacket != null) {
@@ -360,7 +360,7 @@ public class Main implements Constants{
 	}
 	
   }
-  //TODO Get rid of duplicates. But how????
+  
   private static void addPacketToSessionList(ArrayList<Session>sessions,
 											 Session newSession, IpV4Packet ipV4Packet, Timestamp timestamp) {
 	
@@ -448,19 +448,9 @@ public class Main implements Constants{
 	FileWriter intervalWriter = new FileWriter(FileForInterval, APPEND_TO_FILE);
 	Timestamp prevPacketTmstmp = null;
 	ArrayList<Timestamp> tmstmps = session.getPacketTimestamps();
- 
-	//TODO for testing
-//	System.out.println();
-//	int index=0;
+	
 	for (Timestamp tmstmp : tmstmps) {
 	  Double interval = Session.getTimeDifference(tmstmp, prevPacketTmstmp);
-	  //TODO for testing
-//	  System.out.print("Start time: " +session.getStartTime() + "\tEnd time: "+session.getEndTime()+"\t");
-//	  System.out.print("Dur = " + session.getSessionDuration()+"\n");
-//	  System.out.print(tmstmp+"\t"+prevPacketTmstmp+"\t");
-//	  System.out.println("interval " + String.format("%.9f",interval).replaceAll(",", "."));
-//	  System.out.println(session.getIpV4Packets().get(index++).toString());
-	  
 	  intervalWriter.write(String.format("%.9f\n", interval).replaceAll(",", "."));
 	  prevPacketTmstmp = tmstmp;
 	}
@@ -477,11 +467,6 @@ public class Main implements Constants{
 	  durWriter.write(String.format("%.9f\n", dur).replaceAll(",", "."));
 	} else {
 	  durWriter.write(String.format("%.9f\n", 0.0).replaceAll(",", "."));
-	  //For testing
-//                System.out.printf("File:%s\n session %s:%s %s:%s has bad duration %f\n",apPcapFile,session.getIp1(),
-//                        session.getPort1(),session.getIp2(),session.getPort2(),dur);
-//                System.out.printf("Session start time: %s\nSession end time: %s\n",
-//                        session.getStartTime().toString(),session.getEndTime());
 	}
 	durWriter.close();
 	

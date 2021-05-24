@@ -15,7 +15,6 @@ import java.util.Objects;
 
 public class Session implements Constants {
   
-  //TODO Try to make internal session list ??? May be not needed
   private static Map<Integer,Session> allSessions;
   private static int countId = 0;
   
