@@ -90,9 +90,8 @@ public class MultimediaSession extends Session {
   }
   
   
-  //TCP handshake consists of 3 packets: SYN, SYN+ACK and ACK
-  //TCP session start time = time of the 3d packet (ACK)
-  //if there is was no TCP handshake, then we will take timestamp of the first packet as default.
+  //Start time of session.
+  // If it's not TCP start time is arrival time of first packet
   @Override
   public Timestamp getStartTime() {
 	
@@ -129,6 +128,8 @@ public class MultimediaSession extends Session {
 	return tcpSession;
   }
   
+  //End time of session.
+  // If it's not TCP end time is arrival time of last packet
   @Override
   public Timestamp getEndTime() {
 	
